@@ -3,11 +3,7 @@ body{padding-bottom:calc(72px + var(--safe-b))}
 .app-bar{gap:8px}
 .app-bar .spacer{flex:1}
 .app-bar .logo svg{height:28px}
-.app-bar .lang{box-shadow:0 2px 0 var(--line);border-width:2.5px;border-radius:12px}
-.app-bar .lang button{min-height:36px;min-width:40px;padding:4px 8px;font-size:14px}
-.app-bar .lang button+button{border-left-width:2.5px}
 .avatar{width:40px;height:40px;min-width:40px;font-family:var(--font-display);font-weight:400;background:var(--chez-blue);color:#fff;box-shadow:0 2px 0 var(--line)}
-@media (max-width:380px){.app-bar .lang{display:none}}
 .page{max-width:760px;margin:0 auto;padding:16px calc(16px + var(--safe-r)) 24px calc(16px + var(--safe-l));display:flex;flex-direction:column;gap:20px;outline:none}
 .page-title{font-size:clamp(28px,8vw,40px);margin-top:4px}
 .page h2{font-size:22px}

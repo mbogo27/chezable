@@ -29,7 +29,7 @@ for (const scheme of ['light', 'dark']) {
   page.setDefaultTimeout(90000); page.setDefaultNavigationTimeout(90000);
   await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: scheme }, { name: 'prefers-reduced-motion', value: 'reduce' }]);
   await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
-  for (const p of ['/', '/daily', '/challenges', '/me', '/top/toka', '/about', '/privacy']) {
+  for (const p of ['/', '/daily', '/challenges', '/me', '/top/arrow-puzzle', '/about', '/privacy']) {
     await page.goto(BASE + p, { waitUntil: 'networkidle0' });
     await audit(page, `${scheme} ${p}`);
   }

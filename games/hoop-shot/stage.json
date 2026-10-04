@@ -1,0 +1,94 @@
+{
+  "id": "hoop-shot",
+  "version": "1.0.0",
+  "order": 3,
+  "title": {
+    "en": "Hoop Shot"
+  },
+  "rule": {
+    "en": "Tap when the power bar is right to shoot into the hoops; higher hoops score more."
+  },
+  "howto": {
+    "en": [
+      "The power bar rises and falls. Tap, or press Space, to shoot.",
+      "A little power reaches the near hoop; a lot sends the ball to the top. Watch the wind.",
+      "Five balls. A clean swish scores 50% extra."
+    ]
+  },
+  "modes": [
+    "solo",
+    "h2h",
+    "pass"
+  ],
+  "score": {
+    "order": "desc",
+    "min": 0,
+    "max": 3000,
+    "template": {
+      "en": "{s} points"
+    },
+    "templateOne": {
+      "en": "1 point"
+    }
+  },
+  "tiebreak": {
+    "en": "more swishes"
+  },
+  "duration": {
+    "minMs": 4000,
+    "maxMs": 300000
+  },
+  "seeded": true,
+  "assist": true,
+  "variants": {
+    "classic": {
+      "notation": "D01+D02 | V02 × U01+U05 ⊕ M26+M30 ⊕ E20 → S03 → P03",
+      "chezability": 1
+    },
+    "native": {
+      "id": "niko",
+      "label": {
+        "en": "Call Your Shot"
+      },
+      "desc": {
+        "en": "Before each shot you may call a hoop. A called hit scores double; a called miss scores nothing."
+      },
+      "notation": "D01+D02 | V02+V17 × U01+U13 ⊕ M79+M26 → S03 → P07 [O11 on Kadi]",
+      "chezability": 4,
+      "source": {
+        "en": "Kadi, where you must declare \"Niko Kadi!\" before you're allowed to win"
+      }
+    }
+  },
+  "tunables": {
+    "gravity": 900,
+    "theta": 75,
+    "barSpeed": 0.62,
+    "barSpeedStep": 0.09,
+    "balls": 5,
+    "windMax": 22
+  },
+  "share": {
+    "payload": "P03"
+  },
+  "card": {
+    "color": "#FF7A2E",
+    "icon": "🏀"
+  },
+  "strings": {
+    "en": {
+      "rk_tap": "Tap to shoot",
+      "rk_balls": "Balls {n}",
+      "rk_wind": "Wind",
+      "rk_call": "Call a hoop",
+      "rk_nocall": "No call",
+      "rk_called": "Called {h}",
+      "rk_niko": "Niko! Double",
+      "rk_bust": "Called {h}. Missed: 0",
+      "rk_miss": "Miss",
+      "rk_swish": "Swish!",
+      "rk_line": "I scored {n}",
+      "rk_shot": "Shot {n}: {r}"
+    }
+  }
+}

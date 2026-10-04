@@ -1,0 +1,113 @@
+{
+  "id": "cap-drop",
+  "version": "1.0.0",
+  "order": 6,
+  "title": {
+    "en": "Cap Drop"
+  },
+  "rule": {
+    "en": "Slide the caps until the gold cap drops down the chute into the glass."
+  },
+  "howto": {
+    "en": [
+      "Tap a cap next to an empty space to slide it, or swipe it the way it should go.",
+      "Get the gold cap (with the star) to the bottom-right corner, over the chute.",
+      "Match the fewest possible moves for three stars. Keyboard: arrows to choose a cap, Enter to slide, Shift+arrow to push it."
+    ]
+  },
+  "modes": [
+    "solo",
+    "daily",
+    "h2h"
+  ],
+  "score": {
+    "order": "desc",
+    "min": 0,
+    "max": 9999,
+    "template": {
+      "en": "Level {s}"
+    },
+    "modes": {
+      "daily": {
+        "order": "asc",
+        "min": 1,
+        "max": 999,
+        "template": {
+          "en": "{s} moves"
+        },
+        "templateOne": {
+          "en": "1 move"
+        }
+      },
+      "h2h": {
+        "order": "asc",
+        "min": 1,
+        "max": 999,
+        "template": {
+          "en": "{s} moves"
+        },
+        "templateOne": {
+          "en": "1 move"
+        }
+      }
+    }
+  },
+  "tiebreak": {
+    "en": "time"
+  },
+  "duration": {
+    "minMs": 800,
+    "maxMs": 3600000
+  },
+  "seeded": true,
+  "assist": false,
+  "variants": {
+    "classic": {
+      "notation": "D01 | V01/V06 × U02 → S01 → P03",
+      "chezability": 1
+    },
+    "native": {
+      "id": "maji",
+      "label": {
+        "en": "Through the Water"
+      },
+      "desc": {
+        "en": "On odd-sized boards the gold cap must pass through the centre, the water, before it may exit."
+      },
+      "notation": "D01 | V01 × U02 ⊕ M32-style constraint → S08 → P02 [O11 on Shisima]",
+      "chezability": 3,
+      "source": {
+        "en": "Shisima, where a winning line must run through the centre: the water"
+      }
+    }
+  },
+  "tunables": {
+    "hints": 3
+  },
+  "share": {
+    "payload": "P02"
+  },
+  "card": {
+    "color": "#FFCC33",
+    "icon": "⭐"
+  },
+  "strings": {
+    "en": {
+      "kf_level": "Level {n}",
+      "kf_par": "Best possible: {n}",
+      "kf_moves": "{n} moves",
+      "kf_hint": "Hint",
+      "kf_restart": "Restart",
+      "kf_first": "Tap a cap next to an empty space to slide it.",
+      "kf_away": "You're {n} moves from the glass.",
+      "kf_nohint": "No hints left on this board.",
+      "kf_solved": "Solved in {m} moves. Best possible is {p}.",
+      "kf_next": "Play level {n}",
+      "kf_water": "Pass through the water first",
+      "kf_wet": "Through the water!",
+      "kf_line": "I solved it in {m} moves (best possible {p})",
+      "kf_line_lvl": "I reached level {n}",
+      "kf_slid": "Slid a cap. {n} moves."
+    }
+  }
+}

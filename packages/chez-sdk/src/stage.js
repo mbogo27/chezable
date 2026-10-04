@@ -162,7 +162,7 @@ function buildChrome() {
   bar = h(`<header class="chez-bar">
       <a class="icon-btn" href="/" aria-label="${esc(t('home'))}" data-home>${logoMarkSvg}</a>
       <h1 class="title"></h1>
-      <a class="coins" href="/me" aria-label="${esc(t('coins'))}"><span class="coin" aria-hidden="true">c</span><span data-coins>0</span></a>
+      <a class="coins" href="/me" aria-label="${esc(t('coins'))}"><img class="coin" src="/icons/coin.svg" alt="" width="20" height="20"><span data-coins>0</span></a>
       <button class="icon-btn" data-menu aria-label="${esc(t('menu'))}" aria-haspopup="dialog">${menuSvg}</button>
     </header>`);
   document.body.insertBefore(bar, main);
@@ -174,7 +174,6 @@ function buildChrome() {
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
   onNet('me', updateBar);
-  prefs.on((k) => { if (k === 'lang') { updateBar(); } });
   updateBar();
 }
 const menuSvg = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
@@ -211,6 +210,9 @@ function modesFor(variant) {
 
 /* ======================= boot ======================= */
 async function boot() {
+  // Chez.stage() runs before the game's own Chez.onPlay() line; wait a tick so a direct link
+  // (?mode=daily, ?c=...) never calls play() before the handler exists.
+  await new Promise((r) => setTimeout(r, 0));
   openedAt = performance.now();
   track('stage.open', { brand: M.brand || undefined }, M.id);
   flush().catch(() => {});
@@ -238,7 +240,7 @@ async function boot() {
   const direct = q.get('mode');
   if (challenge) return showChallengeIntro();
   if (direct === 'daily' && (M.modes || []).includes('daily')) return play({ mode: 'daily', variant: defaultVariant() });
-  if (M.resumable && M.resume && M.resume()) return; // the game resumed itself (Zamia mid-trench)
+  if (M.resumable && M.resume && M.resume()) return; // the game resumed itself (e.g. a long turn-based run)
   showIntro();
 }
 
@@ -320,7 +322,7 @@ function showIntro() {
 }
 
 function howtoHtml() {
-  const steps = (M.howto && (M.howto[prefs.lang] || M.howto.en)) || [];
+  const steps = (M.howto && M.howto.en) || [];
   return `<ol class="howto" style="margin-top:8px">${steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>`;
 }
 function madeHtml(variant) {
@@ -572,7 +574,7 @@ function earnChips(res) {
   const coins = (res.awards || []).reduce((a, w) => a + w.coins, 0);
   const chips = [];
   if (xp) chips.push(`<span class="chip blue">${esc(t('xp_earned', { xp }))}</span>`);
-  if (coins) chips.push(`<span class="chip tape"><span class="coin" aria-hidden="true" style="width:16px;height:16px;font-size:9px">c</span>${esc(t('coins_earned', { coins }))}</span>`);
+  if (coins) chips.push(`<span class="chip tape"><img class="coin" src="/icons/coin.svg" alt="" width="16" height="16">${esc(t('coins_earned', { coins }))}</span>`);
   if (res.levelUp) chips.push(`<span class="chip ok">${esc(t('level_up', { level: res.level }))}</span>`);
   if (res.levelUp && res.level === NATIVE_UNLOCK_LEVEL) chips.push(`<span class="chip play">${esc(t('native_unlocked'))}</span>`);
   return chips.length ? `<div class="earn">${chips.join('')}</div>` : '';

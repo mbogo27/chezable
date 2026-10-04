@@ -2,7 +2,7 @@
 // assets layer; this Worker only runs for /api/*, /c/* and /b/*.
 import catalogData from './catalog.generated.json';
 import { scoreDef, compareRuns, isBetter, nameProblem, nairobiDay, ID_ABC, RECOVERY_ABC } from '../../../packages/chez-sdk/src/rules.js';
-import * as shisima from '../../../games/shisima/logic.js';
+import * as shisima from '../../../games/water-bugs/logic.js';
 import { award, settleLevel, edge, type Award } from './ledger';
 import { Env, Player, HttpError, json, sha256Hex, randomId, authenticate, optionalAuth, rateLimit, origin, readJson, clampStr } from './util';
 import { challengeLanding, brandedStage } from './pages';
@@ -447,7 +447,7 @@ async function createChallenge(req: Request, env: Env, me: Player, body: string)
       if (d.ghost) pl = JSON.stringify({ ...(payload ? JSON.parse(payload) : {}), ghost: d.ghost });
     } catch {}
   }
-  // level ladders (Toka, Kifuniko) score solo runs by level, but a challenge is played on one level and
+  // level ladders (Arrow Puzzle, Cap Drop) score solo runs by level, but a challenge is played on one level and
   // compared on that level's head-to-head metric, which the stage reports alongside
   let creatorScore = run.score, creatorTiebreak = run.tiebreak;
   if (kind === 'beat' && run.mode === 'solo' && g.score && g.score.modes && g.score.modes.h2h && b.payload && typeof b.payload.h2hScore === 'number') {

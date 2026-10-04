@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Water Bugs · Chezable</title>
+<meta name="description" content="Move your three water bugs to make a line through the centre.">
+<meta name="theme-color" content="#5271FF">
+<meta property="og:title" content="Water Bugs · Chezable">
+<meta property="og:description" content="Move your three water bugs to make a line through the centre.">
+<meta property="og:image" content="/og/water-bugs.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/shell/ui.css">
+<link rel="stylesheet" href="/g/water-bugs/style.css">
+</head>
+<body>
+<main id="stage" aria-label="Water Bugs. Move your three water bugs to make a line through the centre.">
+  <div class="stage-hud">
+    <div class="hud-score"><b id="turn">Water Bugs</b><span id="sub"></span></div>
+    <div class="spacer"></div>
+    <span class="pill" id="who"></span>
+  </div>
+  <div class="board-area"><div id="board" class="board" role="group" aria-label="Water Bugs board"></div></div>
+  <div class="sh-actions" id="actions"></div>
+</main>
+<script src="/shell/chez.js"></script>
+<script type="module" src="/g/water-bugs/game.js"></script>
+</body>
+</html>

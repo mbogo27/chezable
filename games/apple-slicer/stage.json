@@ -1,0 +1,108 @@
+{
+  "id": "apple-slicer",
+  "version": "1.0.0",
+  "order": 1,
+  "title": {
+    "en": "Apple Slicer"
+  },
+  "rule": {
+    "en": "Throw knives through the gap in the spinning spiked ring to slice the apple."
+  },
+  "howto": {
+    "en": [
+      "Tap, or press Space, to throw a knife.",
+      "Time it so the knife flies through the gap in the spiked ring.",
+      "Ten knives. The ring spins faster with every knife you use."
+    ]
+  },
+  "modes": [
+    "solo",
+    "h2h",
+    "pass"
+  ],
+  "score": {
+    "order": "desc",
+    "min": 0,
+    "max": 10,
+    "decimals": 0,
+    "template": {
+      "en": "{s} of 10 apples"
+    },
+    "templateOne": {
+      "en": "1 of 10 apples"
+    }
+  },
+  "tiebreak": {
+    "en": "less total time"
+  },
+  "duration": {
+    "minMs": 2500,
+    "maxMs": 900000
+  },
+  "seeded": true,
+  "assist": true,
+  "variants": {
+    "classic": {
+      "notation": "D01+D05 | V02 × U01 ⊕ E20 → S03 → P03",
+      "chezability": 1
+    },
+    "native": {
+      "id": "kati",
+      "label": {
+        "en": "Block Mode"
+      },
+      "desc": {
+        "en": "Two players, one phone. One throws; the other spins the ring to block every knife. Then swap."
+      },
+      "modes": [
+        "pass"
+      ],
+      "passCustom": true,
+      "notation": "D01+D12+D13 | V02+V09-style drag × U01+U03 ⊕ M06+M31 → S04+S11 → P01 [O02 on kati]",
+      "chezability": 4,
+      "source": {
+        "en": "kati, the Kenyan street game where throwers try to hit the dodgers"
+      }
+    }
+  },
+  "tunables": {
+    "knives": 10,
+    "throwSpeed": 2100,
+    "omegaBase": 1.5,
+    "omegaPerKnife": 0.38,
+    "omegaPerCut": 0.06,
+    "gapStart": 0.72,
+    "gapPerCut": 0.035,
+    "gapMin": 0.46,
+    "wobbleFrom": 3,
+    "reverseFrom": 5,
+    "reverseRate": 0.35,
+    "katiGap": 0.62,
+    "katiMaxOmega": 3.4,
+    "katiDrift": 0.5
+  },
+  "share": {
+    "payload": "P03"
+  },
+  "card": {
+    "color": "#78C832",
+    "icon": "🍏"
+  },
+  "strings": {
+    "en": {
+      "kt_tap": "Tap to throw",
+      "kt_knives": "Knives {n}",
+      "kt_sliced": "Sliced! {n} of 10",
+      "kt_blocked": "Blocked. {n} knives left",
+      "kt_line": "I sliced {n} of 10 apples",
+      "kt_v_perfect": "Every knife landed. Perfect run.",
+      "kt_v_sharp": "Sharp throwing.",
+      "kt_v_ok": "Not bad. The fast knives are the hard ones.",
+      "kt_v_low": "The ring won this time.",
+      "kt_thrower": "{name} throws",
+      "kt_ringer": "{name} spins the ring",
+      "kt_kati_help": "Thrower: tap the bottom half. Ring: drag the top half, or use the arrow keys.",
+      "kt_round": "Round {n} of 2"
+    }
+  }
+}

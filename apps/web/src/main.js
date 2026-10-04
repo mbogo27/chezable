@@ -26,15 +26,11 @@ let waitingCount = C.store.get('waiting', 0);
 
 function frame(active, inner) {
   const p = C.player();
-  const lang = C.prefs.lang;
   return `
   <header class="chez-bar app-bar">
     <a class="logo" href="/" aria-label="Chezable home">${logoSvg}</a>
     <span class="spacer"></span>
-    <div class="seg lang" role="group" aria-label="${esc(t('language'))}">
-      <button type="button" data-lang="en" aria-pressed="${lang === 'en'}">EN</button><button type="button" data-lang="sw" aria-pressed="${lang === 'sw'}">SW</button>
-    </div>
-    <a class="coins" href="/me" aria-label="${esc(t('coins'))}: ${me().coins || 0}"><span class="coin" aria-hidden="true">c</span><span>${me().coins || 0}</span></a>
+    <a class="coins" href="/me" aria-label="${esc(t('coins'))}: ${me().coins || 0}"><img class="coin" src="/icons/coin.svg" alt="" width="20" height="20"><span>${me().coins || 0}</span></a>
     <a class="icon-btn avatar" href="/me" aria-label="${esc(t('profile'))}">${esc((p.name || '?').slice(0, 1).toUpperCase())}</a>
   </header>
   <main id="main" class="page" tabindex="-1">${inner}</main>
@@ -144,7 +140,7 @@ function pageDaily() {
   return frame('daily', `
     <h1 class="page-title">${esc(t('daily_title'))}</h1>
     <p class="muted">${esc(t('daily_intro'))}</p>
-    <p class="chip tape" style="align-self:flex-start">${esc(new Date(Date.parse(day + 'T12:00:00Z')).toLocaleDateString(C.prefs.lang === 'sw' ? 'sw-KE' : 'en-KE', { weekday: 'long', day: 'numeric', month: 'long' }))}</p>
+    <p class="chip tape" style="align-self:flex-start">${esc(new Date(Date.parse(day + 'T12:00:00Z')).toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long' }))}</p>
     <div class="rows big">${list.map((g) => {
       const done = C.store.get('daily:' + g.id) === day;
       return `<a class="row link" href="/g/${g.id}/?mode=daily"><span><b>${esc(L(g.title))}</b><small>${esc(L(g.rule))}</small></span>
@@ -210,7 +206,7 @@ function pageMe() {
       <div class="level-row"><b class="display" style="font-size:24px">${esc(t('level', { level: lvl }))}</b><span class="muted">${xp} XP</span></div>
       <div class="xpbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="${esc(t('xp_to_next', { xp: hi - xp, level: lvl + 1 }))}"><i style="width:${pct}%"></i></div>
       <p class="muted">${esc(t('xp_to_next', { xp: hi - xp, level: lvl + 1 }))}${lvl < NATIVE_UNLOCK_LEVEL && p.cohort !== 'native' ? ` · ${esc(t('variant_native_locked'))}` : ''}</p>
-      <p class="coins-line"><span class="coin" aria-hidden="true">c</span> <b>${m.coins || 0}</b> ${esc(t('coins'))}</p>
+      <p class="coins-line"><img class="coin" src="/icons/coin.svg" alt="" width="20" height="20"> <b>${m.coins || 0}</b> ${esc(t('coins'))}</p>
       <p class="muted" style="font-size:14px">${esc(t('coins_note'))}</p>
     </section>
     <section class="card" id="name">
@@ -241,7 +237,6 @@ function pageMe() {
     </section>
     <section class="card">
       <h2>${esc(t('settings'))}</h2>
-      <div class="seg" role="group" aria-label="${esc(t('language'))}"><button type="button" data-lang="en" aria-pressed="${prefs.lang === 'en'}">${esc(t('lang_en'))}</button><button type="button" data-lang="sw" aria-pressed="${prefs.lang === 'sw'}">${esc(t('lang_sw'))}</button></div>
       ${['sound', 'haptics', 'reducedMotion', 'assist'].map((k) => `<label class="switch"><span>${esc(t(k === 'reducedMotion' ? 'reduced_motion' : k))}${k === 'assist' ? `<br><small class="muted">${esc(t('assist_desc'))}</small>` : ''}</span><input type="checkbox" data-pref="${k}" ${prefs[k] ? 'checked' : ''}></label>`).join('')}
       <div class="hstack"><button class="btn alt small" data-export>${esc(t('export'))}</button><label class="btn alt small" style="cursor:pointer">${esc(t('import'))}<input type="file" accept="application/json" data-import hidden></label></div>
     </section>
@@ -393,7 +388,7 @@ function route() {
   if (p === '/me') return [pageMe, afterMe, t('profile')];
   if ((m = p.match(/^\/top\/([a-z0-9-]+)$/))) return [() => pageTop(m[1]), () => afterTop(m[1]), t('leaderboard')];
   if ((m = p.match(/^\/c\/([A-Za-z0-9]+)$/))) return [() => pageChallenge(m[1]), () => afterChallenge(m[1]), t('challenges')];
-  if (['/about', '/privacy', '/terms'].includes(p)) return [() => frame('', renderStatic(p.slice(1), C.prefs.lang) + footer()), null, t(p.slice(1))];
+  if (['/about', '/privacy', '/terms'].includes(p)) return [() => frame('', renderStatic(p.slice(1)) + footer()), null, t(p.slice(1))];
   return [pageNotFound, null, '404'];
 }
 let first = true;
@@ -407,7 +402,6 @@ function render() {
   first = false;
 }
 function bindFrame() {
-  document.querySelectorAll('[data-lang]').forEach((b) => b.addEventListener('click', () => { C.prefs.set('lang', b.dataset.lang); render(); }));
 }
 document.addEventListener('click', (e) => {
   const a = e.target.closest('a[href]');

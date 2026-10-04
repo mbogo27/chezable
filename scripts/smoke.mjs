@@ -1,7 +1,7 @@
 // End-to-end API smoke test against a running Worker (default http://127.0.0.1:8787, local SQLite D1).
 //   node scripts/smoke.mjs [baseUrl]
 // Plays the core loop as simulated players: register, claim names, run, challenge, accept, send back,
-// rescue (Okoa), Shisima by link, leaderboards, recovery, caps and fair-play checks.
+// rescue (Rescue), Water Bugs by link, leaderboards, recovery, caps and fair-play checks.
 import { webcrypto as crypto } from 'node:crypto';
 import assert from 'node:assert/strict';
 
@@ -75,7 +75,7 @@ assert.equal((await B.call('POST', '/player/name', { name: 'a b' })).status, 422
 await B.ok('POST', '/player/name', { name: `Otieno_${uniq}` });
 
 // --- runs, ledger
-const game = 'kata-tufaha';
+const game = 'apple-slicer';
 const r1 = await A.play(game, 4, { tiebreak: 30 });
 assert.ok(r1.finish.awards.find((a) => a.event === 'run.finished')); assert.ok(r1.finish.awards.find((a) => a.event === 'stage.first_play'));
 ok(`first run: +${r1.finish.awards.reduce((s, a) => s + a.xp, 0)} XP, rank ${r1.finish.rank}`);
@@ -89,7 +89,7 @@ const s = await A.ok('POST', '/run/start', { game, mode: 'solo', variant: 'class
 assert.equal((await A.call('POST', '/run/finish', { runId: s.runId, score: 5 })).status, 422); ok('too-fast runs rejected (T0 duration)');
 const s2 = await A.ok('POST', '/run/start', { game, mode: 'solo', variant: 'classic' });
 await sleep(2600);
-assert.equal((await A.call('POST', '/run/finish', { runId: s2.runId, score: 11 })).status, 422); ok('score bounds enforced (Kata Tufaha ≤ 10)');
+assert.equal((await A.call('POST', '/run/finish', { runId: s2.runId, score: 11 })).status, 422); ok('score bounds enforced (Apple Slicer ≤ 10)');
 assert.equal((await B.call('POST', '/run/finish', { runId: r2.start.runId, score: 1 })).status, 404); ok('cannot finish someone else\'s run');
 // offline run synced later
 const off = await A.ok('POST', '/run/finish', { runId: 'L' + crypto.randomUUID(), score: 6, durationMs: 20000, local: { game, mode: 'solo', variant: 'classic', seed: 'offline-seed', startedAt: Date.now() - 60000 } });
@@ -151,7 +151,7 @@ ok('11 challenges created (XP cap checked server-side)');
 const ev = await B.ok('POST', '/events', { events: [{ name: 'session.start', props: {}, ts: Date.now(), session: 'abc' }, { name: 'BAD NAME', ts: Date.now() }] });
 assert.equal(ev.n, 1); ok('telemetry batch accepted, bad names dropped');
 
-// --- Nyanya Okoa rescue + Shisima turns (when those stages exist)
+// --- Nyanya Rescue rescue + Water Bugs turns (when those stages exist)
 if (cat.games.find((g) => g.id === 'nyanya-jetpack')) {
   const run = await C2.ok('POST', '/run/start', { game: 'nyanya-jetpack', mode: 'solo', variant: 'native' });
   await sleep(2100);
@@ -161,25 +161,25 @@ if (cat.games.find((g) => g.id === 'nyanya-jetpack')) {
   assert.equal(bOk.mode, 'okoa');
   await B.ok('POST', '/run/finish', { runId: bOk.runId, score: 1 });
   const aL = await C2.ok('GET', '/challenges');
-  assert.ok(aL.waitingYou.find((c) => c.id === rv.id && c.action === 'continue')); ok('Okoa: B rescued A; A sees "carry on"');
+  assert.ok(aL.waitingYou.find((c) => c.id === rv.id && c.action === 'continue')); ok('Rescue: B rescued A; A sees "carry on"');
   const cont = await C2.ok('POST', '/run/start', { game: 'nyanya-jetpack', challengeId: rv.id });
   assert.equal(cont.mode, 'revive'); await sleep(2100);
   await C2.ok('POST', '/run/finish', { runId: cont.runId, score: 420 });
-  assert.equal((await C2.call('POST', '/run/start', { game: 'nyanya-jetpack', challengeId: rv.id })).status, 409); ok('Okoa continuation can only be used once');
+  assert.equal((await C2.call('POST', '/run/start', { game: 'nyanya-jetpack', challengeId: rv.id })).status, 409); ok('Rescue continuation can only be used once');
 }
-if (cat.games.find((g) => g.id === 'shisima')) {
-  const t = await B.ok('POST', '/challenge', { kind: 'turn', game: 'shisima' });
+if (cat.games.find((g) => g.id === 'water-bugs')) {
+  const t = await B.ok('POST', '/challenge', { kind: 'turn', game: 'water-bugs' });
   const st = t.state;
-  const { legalMoves } = await import('../games/shisima/logic.js');
+  const { legalMoves } = await import('../games/water-bugs/logic.js');
   const m1 = legalMoves(st, 1)[0];
   await B.ok('POST', `/challenge/${t.id}/move`, { move: m1 });
-  assert.equal((await B.call('POST', `/challenge/${t.id}/move`, { move: m1 })).status, 409); ok('Shisima: cannot move twice in a row');
+  assert.equal((await B.call('POST', `/challenge/${t.id}/move`, { move: m1 })).status, 409); ok('Water Bugs: cannot move twice in a row');
   const pubT = await N.ok('GET', `/challenge/${t.id}`);
   assert.equal(pubT.yourTurn, true);
   const m2 = legalMoves(pubT.state, 2)[0];
   const after = await N.ok('POST', `/challenge/${t.id}/move`, { move: m2 });
-  assert.equal(after.state.toMove, 1); ok('Shisima: second player joins by link and moves');
-  assert.equal((await N.call('POST', `/challenge/${t.id}/move`, { move: [0, 8] })).status, 409); ok('Shisima: turn order enforced');
+  assert.equal(after.state.toMove, 1); ok('Water Bugs: second player joins by link and moves');
+  assert.equal((await N.call('POST', `/challenge/${t.id}/move`, { move: [0, 8] })).status, 409); ok('Water Bugs: turn order enforced');
 }
 
 console.log(`\n${passed} checks passed.`);

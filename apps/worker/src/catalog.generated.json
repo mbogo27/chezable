@@ -1,14 +1,12 @@
 {
  "games": [
   {
-   "id": "kata-tufaha",
+   "id": "apple-slicer",
    "title": {
-    "en": "Kata Tufaha",
-    "sw": "Kata Tufaha"
+    "en": "Apple Slicer"
    },
    "rule": {
-    "en": "Throw knives through the gap in the spinning spiked ring to slice the apple.",
-    "sw": "Rusha visu kupitia nafasi ya pete inayozunguka ukate tufaha."
+    "en": "Throw knives through the gap in the spinning spiked ring to slice the apple."
    },
    "modes": [
     "solo",
@@ -21,12 +19,10 @@
     "max": 10,
     "decimals": 0,
     "template": {
-     "en": "{s} of 10 apples",
-     "sw": "matufaha {s} kati ya 10"
+     "en": "{s} of 10 apples"
     },
     "templateOne": {
-     "en": "1 of 10 apples",
-     "sw": "tufaha 1 kati ya 10"
+     "en": "1 of 10 apples"
     }
    },
    "duration": {
@@ -41,12 +37,10 @@
     "native": {
      "id": "kati",
      "label": {
-      "en": "Kati mode",
-      "sw": "Mtindo wa Kati"
+      "en": "Block Mode"
      },
      "desc": {
-      "en": "Two players, one phone. One throws; the other spins the ring to block every knife. Then swap.",
-      "sw": "Wachezaji wawili, simu moja. Mmoja anarusha; mwingine anazungusha pete kuzuia kila kisu. Kisha mnabadilishana."
+      "en": "Two players, one phone. One throws; the other spins the ring to block every knife. Then swap."
      },
      "modes": [
       "pass"
@@ -55,22 +49,19 @@
      "notation": "D01+D12+D13 | V02+V09-style drag × U01+U03 ⊕ M06+M31 → S04+S11 → P01 [O02 on kati]",
      "chezability": 4,
      "source": {
-      "en": "kati, the Kenyan street game where throwers try to hit the dodgers",
-      "sw": "kati, mchezo wa mtaani ambapo warushaji hujaribu kuwapiga wanaokwepa"
+      "en": "kati, the Kenyan street game where throwers try to hit the dodgers"
      }
     }
    },
    "assist": true
   },
   {
-   "id": "kata-nusu",
+   "id": "cut-in-half",
    "title": {
-    "en": "Kata Nusu",
-    "sw": "Kata Nusu"
+    "en": "Cut It in Half"
    },
    "rule": {
-    "en": "Stop the sliding saw at exactly 50 cm. Three cuts; the lowest total wins.",
-    "sw": "Simamisha msumeno kwenye sentimita 50 kamili. Mikato mitatu; jumla ndogo inashinda."
+    "en": "Stop the sliding saw at exactly 50 cm. Three cuts; the lowest total wins."
    },
    "modes": [
     "solo",
@@ -83,8 +74,7 @@
     "max": 150,
     "decimals": 1,
     "template": {
-     "en": "{s} cm off",
-     "sw": "sm {s} pembeni"
+     "en": "{s} cm off"
     }
    },
    "duration": {
@@ -99,32 +89,27 @@
     "native": {
      "id": "bila-kuhesabu",
      "label": {
-      "en": "Bila Kuhesabu",
-      "sw": "Bila Kuhesabu"
+      "en": "No Numbers"
      },
      "desc": {
-      "en": "No guide line and no numbers until all three cuts are done. Judge the half by eye.",
-      "sw": "Hakuna mstari wa mwongozo wala namba hadi mikato yote mitatu imalizike. Pima nusu kwa macho."
+      "en": "No guide line and no numbers until all three cuts are done. Judge the half by eye."
      },
      "notation": "D01 | V02 × U01+U10 ⊕ M44 → S03 → P03 [O05 on Igisoro]",
      "chezability": 4,
      "source": {
-      "en": "Igisoro, where masters never count their seeds openly",
-      "sw": "Igisoro, ambapo mabingwa hawahesabu mbegu waziwazi"
+      "en": "Igisoro, where masters never count their seeds openly"
      }
     }
    },
    "assist": true
   },
   {
-   "id": "ruka-kapu",
+   "id": "hoop-shot",
    "title": {
-    "en": "Ruka Kapu",
-    "sw": "Ruka Kapu"
+    "en": "Hoop Shot"
    },
    "rule": {
-    "en": "Tap when the power bar is right to shoot into the hoops; higher hoops score more.",
-    "sw": "Gusa nguvu ikiwa sawa urushe mpira kikapuni; vikapu vya juu vina alama zaidi."
+    "en": "Tap when the power bar is right to shoot into the hoops; higher hoops score more."
    },
    "modes": [
     "solo",
@@ -136,12 +121,10 @@
     "min": 0,
     "max": 3000,
     "template": {
-     "en": "{s} points",
-     "sw": "alama {s}"
+     "en": "{s} points"
     },
     "templateOne": {
-     "en": "1 point",
-     "sw": "alama 1"
+     "en": "1 point"
     }
    },
    "duration": {
@@ -156,18 +139,15 @@
     "native": {
      "id": "niko",
      "label": {
-      "en": "Niko!",
-      "sw": "Niko!"
+      "en": "Call Your Shot"
      },
      "desc": {
-      "en": "Before each shot you may call a hoop. A called hit scores double; a called miss scores nothing.",
-      "sw": "Kabla ya kila kurusha unaweza kutaja kikapu. Ukipata ulichotaja alama ni mara mbili; ukikosa, sifuri."
+      "en": "Before each shot you may call a hoop. A called hit scores double; a called miss scores nothing."
      },
      "notation": "D01+D02 | V02+V17 × U01+U13 ⊕ M79+M26 → S03 → P07 [O11 on Kadi]",
      "chezability": 4,
      "source": {
-      "en": "Kadi, where you must declare \"Niko Kadi!\" before you're allowed to win",
-      "sw": "Kadi, ambapo lazima utangaze \"Niko Kadi!\" kabla ya kuruhusiwa kushinda"
+      "en": "Kadi, where you must declare \"Niko Kadi!\" before you're allowed to win"
      }
     }
    },
@@ -176,12 +156,10 @@
   {
    "id": "nyanya-jetpack",
    "title": {
-    "en": "Nyanya Jetpack",
-    "sw": "Nyanya Jetpack"
+    "en": "Nyanya Jetpack"
    },
    "rule": {
-    "en": "Hold to fire the jetpack and keep the tomato off the spikes.",
-    "sw": "Shikilia kuwasha jetpack na uiepushe nyanya na miiba."
+    "en": "Hold to fire the jetpack and keep the tomato off the spikes."
    },
    "modes": [
     "solo",
@@ -194,8 +172,7 @@
     "max": 20000,
     "decimals": 1,
     "template": {
-     "en": "{s} m",
-     "sw": "m {s}"
+     "en": "{s} m"
     }
    },
    "duration": {
@@ -210,33 +187,28 @@
     "native": {
      "id": "okoa",
      "label": {
-      "en": "Okoa",
-      "sw": "Okoa"
+      "en": "Rescue"
      },
      "desc": {
-      "en": "Crash, and you can send a rescue link. A friend who catches your falling tomato within 10 seconds brings you back, and you carry on from the crash.",
-      "sw": "Ukianguka, unaweza kutuma kiungo cha uokoaji. Rafiki akidaka nyanya yako ndani ya sekunde 10 anakurudisha, na unaendelea ulipoanguka."
+      "en": "Crash, and you can send a rescue link. A friend who catches your falling tomato within 10 seconds brings you back, and you carry on from the crash."
      },
      "revive": true,
      "notation": "D13+D07 | V03 × U01+U12 ⊕ M82+M95 → S13 → P05 [O10 on kati]",
      "chezability": 4,
      "source": {
-      "en": "kati, where catching the ball brings an eliminated player back",
-      "sw": "kati, ambapo kudaka mpira humrudisha mchezaji aliyetolewa"
+      "en": "kati, where catching the ball brings an eliminated player back"
      }
     }
    },
    "assist": true
   },
   {
-   "id": "toka",
+   "id": "arrow-puzzle",
    "title": {
-    "en": "Toka",
-    "sw": "Toka"
+    "en": "Arrow Puzzle"
    },
    "rule": {
-    "en": "Tap arrows to slide them off the board, without letting one hit another.",
-    "sw": "Gusa mishale iteleze nje ya ubao, bila mmoja kugonga mwingine."
+    "en": "Tap arrows to slide them off the board, without letting one hit another."
    },
    "modes": [
     "solo",
@@ -248,8 +220,7 @@
     "min": 0,
     "max": 9999,
     "template": {
-     "en": "Level {s}",
-     "sw": "Kiwango {s}"
+     "en": "Level {s}"
     },
     "modes": {
      "daily": {
@@ -257,12 +228,10 @@
       "min": 0,
       "max": 999,
       "template": {
-       "en": "{s} bumps",
-       "sw": "migongano {s}"
+       "en": "{s} bumps"
       },
       "templateOne": {
-       "en": "1 bump",
-       "sw": "mgongano 1"
+       "en": "1 bump"
       }
      },
      "h2h": {
@@ -270,12 +239,10 @@
       "min": 0,
       "max": 999,
       "template": {
-       "en": "{s} bumps",
-       "sw": "migongano {s}"
+       "en": "{s} bumps"
       },
       "templateOne": {
-       "en": "1 bump",
-       "sw": "mgongano 1"
+       "en": "1 bump"
       }
      }
     }
@@ -292,32 +259,27 @@
     "native": {
      "id": "giuthi",
      "label": {
-      "en": "Giuthi arrows",
-      "sw": "Mishale ya Giuthi"
+      "en": "Reversing Arrows"
      },
      "desc": {
-      "en": "Double-headed arrows don't cost a heart when blocked: they reverse and leave by the tail. Blocked both ways, they stay put.",
-      "sw": "Mishale yenye vichwa viwili haipotezi moyo ikizuiwa: inageuka na kutoka kwa mkia. Ikizuiwa pande zote, inabaki ilipo."
+      "en": "Double-headed arrows don't cost a heart when blocked: they reverse and leave by the tail. Blocked both ways, they stay put."
      },
      "notation": "D08+D01 | V01 × U02+U06 ⊕ M61 → S08 → P02 [O08 on Giuthi]",
      "chezability": 3,
      "source": {
-      "en": "Giuthi, where sowing reverses direction when the last seed lands in an occupied pit",
-      "sw": "Giuthi, ambapo upandaji hugeuka mwelekeo mbegu ya mwisho ikiangukia shimo lenye mbegu"
+      "en": "Giuthi, where sowing reverses direction when the last seed lands in an occupied pit"
      }
     }
    },
    "assist": false
   },
   {
-   "id": "kifuniko",
+   "id": "cap-drop",
    "title": {
-    "en": "Kifuniko",
-    "sw": "Kifuniko"
+    "en": "Cap Drop"
    },
    "rule": {
-    "en": "Slide the caps until the gold cap drops down the chute into the glass.",
-    "sw": "Teleza vifuniko hadi kifuniko cha dhahabu kidondoke kwenye glasi."
+    "en": "Slide the caps until the gold cap drops down the chute into the glass."
    },
    "modes": [
     "solo",
@@ -329,8 +291,7 @@
     "min": 0,
     "max": 9999,
     "template": {
-     "en": "Level {s}",
-     "sw": "Kiwango {s}"
+     "en": "Level {s}"
     },
     "modes": {
      "daily": {
@@ -338,12 +299,10 @@
       "min": 1,
       "max": 999,
       "template": {
-       "en": "{s} moves",
-       "sw": "hatua {s}"
+       "en": "{s} moves"
       },
       "templateOne": {
-       "en": "1 move",
-       "sw": "hatua 1"
+       "en": "1 move"
       }
      },
      "h2h": {
@@ -351,12 +310,10 @@
       "min": 1,
       "max": 999,
       "template": {
-       "en": "{s} moves",
-       "sw": "hatua {s}"
+       "en": "{s} moves"
       },
       "templateOne": {
-       "en": "1 move",
-       "sw": "hatua 1"
+       "en": "1 move"
       }
      }
     }
@@ -373,32 +330,27 @@
     "native": {
      "id": "maji",
      "label": {
-      "en": "Maji ya Shisima",
-      "sw": "Maji ya Shisima"
+      "en": "Through the Water"
      },
      "desc": {
-      "en": "On odd-sized boards the gold cap must pass through the centre, the water, before it may exit.",
-      "sw": "Kwenye bao za ukubwa wa witiri, kifuniko cha dhahabu lazima kipite katikati, majini, kabla ya kutoka."
+      "en": "On odd-sized boards the gold cap must pass through the centre, the water, before it may exit."
      },
      "notation": "D01 | V01 × U02 ⊕ M32-style constraint → S08 → P02 [O11 on Shisima]",
      "chezability": 3,
      "source": {
-      "en": "Shisima, where a winning line must run through the centre: the water",
-      "sw": "Shisima, ambapo mstari wa ushindi lazima upite katikati: majini"
+      "en": "Shisima, where a winning line must run through the centre: the water"
      }
     }
    },
    "assist": false
   },
   {
-   "id": "kata-ndimu",
+   "id": "lemon-squeeze",
    "title": {
-    "en": "Kata Ndimu",
-    "sw": "Kata Ndimu"
+    "en": "Lemon Squeeze"
    },
    "rule": {
-    "en": "Swipe to cut the lemon and drain the pieces without flies into the glass.",
-    "sw": "Pangusa kukata ndimu na umimine vipande visivyo na nzi kwenye glasi."
+    "en": "Swipe to cut the lemon and drain the pieces without flies into the glass."
    },
    "modes": [
     "solo",
@@ -409,12 +361,10 @@
     "min": 0,
     "max": 500,
     "template": {
-     "en": "{s} lemons juiced",
-     "sw": "ndimu {s} zimekamuliwa"
+     "en": "{s} lemons juiced"
     },
     "templateOne": {
-     "en": "1 lemon juiced",
-     "sw": "ndimu 1 imekamuliwa"
+     "en": "1 lemon juiced"
     }
    },
    "duration": {
@@ -429,85 +379,27 @@
     "native": {
      "id": "panga-nzi",
      "label": {
-      "en": "Panga Nzi",
-      "sw": "Panga Nzi"
+      "en": "Place the Flies"
      },
      "desc": {
-      "en": "When you send a challenge, you place the flies first. Your layout becomes your friend's board.",
-      "sw": "Unapotuma changamoto, unapanga nzi kwanza. Mpangilio wako unakuwa ubao wa rafiki yako."
+      "en": "When you send a challenge, you place the flies first. Your layout becomes your friend's board."
      },
      "notation": "D01+D12 | V05+V06 × U01+U03 ⊕ M22 → S03 → P03 [O02+O07 on Kiothi]",
      "chezability": 4,
      "source": {
-      "en": "Kiothi, where a player may redistribute one pit's seeds anywhere on the board before play",
-      "sw": "Kiothi, ambapo mchezaji anaweza kugawa upya mbegu za shimo moja popote kabla ya mchezo"
+      "en": "Kiothi, where a player may redistribute one pit's seeds anywhere on the board before play"
      }
     }
    },
    "assist": true
   },
   {
-   "id": "zamia",
+   "id": "water-bugs",
    "title": {
-    "en": "Zamia",
-    "sw": "Zamia"
+    "en": "Water Bugs"
    },
    "rule": {
-    "en": "Dive the wreck with rival divers, grab treasure, and get back before the air or Papa the shark runs out your luck.",
-    "sw": "Piga mbizi kwenye mabaki na wapinzani, chukua hazina, urudi kabla hewa au Papa hajakumaliza."
-   },
-   "modes": [
-    "daily",
-    "solo",
-    "h2h"
-   ],
-   "score": {
-    "order": "desc",
-    "min": 0,
-    "max": 400,
-    "template": {
-     "en": "{s} pts",
-     "sw": "alama {s}"
-    }
-   },
-   "duration": {
-    "minMs": 5000,
-    "maxMs": 21600000
-   },
-   "variants": {
-    "classic": {
-     "notation": "D01+D02 | V12 × U13+U03 ⊕ M39 → S07+S08 → P03 [O04, O15]",
-     "chezability": 2
-    },
-    "native": {
-     "id": "kiothi",
-     "label": {
-      "en": "Kiothi seeding",
-      "sw": "Upandaji wa Kiothi"
-     },
-     "desc": {
-      "en": "Before dive 1 you may move one tile anywhere in the trench. Lift gold shallow for a safer grab, but rivals can take it too.",
-      "sw": "Kabla ya mbizi ya kwanza unaweza kuhamisha kigae kimoja popote kwenye mfereji. Pandisha dhahabu juu upate kwa urahisi, lakini wapinzani nao wanaweza kuichukua."
-     },
-     "notation": "D01+D02 | V12+V06 × U13+U03+U06 ⊕ M39+M22 → S07+S08 → P02 [O04 on Kiothi]",
-     "chezability": 3,
-     "source": {
-      "en": "Kiothi, where one pit's seeds may be redistributed anywhere before play begins",
-      "sw": "Kiothi, ambapo mbegu za shimo moja zinaweza kugawanywa popote kabla ya mchezo kuanza"
-     }
-    }
-   },
-   "assist": false
-  },
-  {
-   "id": "shisima",
-   "title": {
-    "en": "Shisima",
-    "sw": "Shisima"
-   },
-   "rule": {
-    "en": "Move your three water bugs to make a line through the centre.",
-    "sw": "Sogeza wadudu wako watatu wa majini wafanye mstari unaopita katikati."
+    "en": "Move your three water bugs to make a line through the centre."
    },
    "modes": [
     "solo",
@@ -519,8 +411,7 @@
     "min": 0,
     "max": 3,
     "template": {
-     "en": "{s} pts",
-     "sw": "alama {s}"
+     "en": "{s} pts"
     }
    },
    "duration": {
@@ -532,8 +423,7 @@
      "notation": "D01 | V06 × U03 ⊕ M57+M32+M38 → S03+S08 → P03 [O04, O10 on Shisima]",
      "chezability": 4,
      "source": {
-      "en": "Shisima, played by the Tiriki of western Kenya. The pieces, imbalavali, are water bugs racing to the water.",
-      "sw": "Shisima, unaochezwa na Watiriki wa magharibi mwa Kenya. Vipande, imbalavali, ni wadudu wa majini wanaokimbilia majini."
+      "en": "Shisima, played by the Tiriki of western Kenya. The pieces, imbalavali, are water bugs racing to the water."
      }
     }
    },

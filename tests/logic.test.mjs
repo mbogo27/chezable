@@ -3,9 +3,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { rng, xmur3 } from '../packages/rng/rng.js';
 import { levelFor, xpForLevel, nameProblem, nairobiDay, compareRuns, scoreDef, AWARDS } from '../packages/chez-sdk/src/rules.js';
-import * as toka from '../games/toka/logic.js';
-import * as kif from '../games/kifuniko/logic.js';
-import * as shis from '../games/shisima/logic.js';
+import * as toka from '../games/arrow-puzzle/logic.js';
+import * as kif from '../games/cap-drop/logic.js';
+import * as shis from '../games/water-bugs/logic.js';
 import { createCourse, createFlyer, stepFlyer, replay, STEP } from '../games/nyanya-jetpack/sim.js';
 import fs from 'node:fs';
 
@@ -50,15 +50,15 @@ test('Nairobi day rolls over at 21:00 UTC', () => {
 });
 
 test('scores: per-mode order and tiebreaks', () => {
-  const tk = stage('toka');
+  const tk = stage('arrow-puzzle');
   assert.equal(scoreDef(tk, 'solo').order, 'desc');
   assert.equal(scoreDef(tk, 'daily').order, 'asc');
-  const def = scoreDef(stage('kata-nusu'), 'h2h');
+  const def = scoreDef(stage('cut-in-half'), 'h2h');
   assert.ok(compareRuns(def, { score: 3.1 }, { score: 4 }) < 0, 'lower cm off wins');
   assert.ok(compareRuns(def, { score: 3, tiebreak: 0.2 }, { score: 3, tiebreak: 1 }) < 0, 'tiebreak decides');
 });
 
-test('Toka: every generated level is solvable (classic and Giuthi)', () => {
+test('Arrow Puzzle: every generated level is solvable (classic and Giuthi)', () => {
   for (const native of [false, true]) {
     let rev = 0, backOnly = 0;
     for (let lvl = 1; lvl <= 40; lvl++) {
@@ -75,7 +75,7 @@ test('Toka: every generated level is solvable (classic and Giuthi)', () => {
   assert.deepEqual(d.arrows.map((a) => a.cells), toka.generate('toka-2026-10-04-abc', toka.DAILY_CFG, false).arrows.map((a) => a.cells), 'daily board deterministic');
 });
 
-test('Kifuniko: par is the true shortest solution; Maji ya Shisima needs the centre', () => {
+test('Cap Drop: par is the true shortest solution; Through the Water needs the centre', () => {
   for (let lvl = 1; lvl <= 20; lvl++) {
     const P = kif.generate(kif.levelSeed(lvl), kif.cfgFor(lvl));
     assert.ok(P && P.par >= 1 && P.par < Infinity, `level ${lvl}`);
@@ -93,7 +93,7 @@ test('Kifuniko: par is the true shortest solution; Maji ya Shisima needs the cen
   assert.equal(kif.solve(Q.n, Q.s, Q.E, { native: true }).dist, kif.solve(Q.n, Q.s, Q.E).dist);
 });
 
-test('Kifuniko: 5x5 solver stays bounded (Appendix B)', () => {
+test('Cap Drop: 5x5 solver stays bounded (Appendix B)', () => {
   const t0 = Date.now();
   const P = kif.generate(kif.levelSeed(25), kif.cfgFor(25));
   assert.ok(P.par < Infinity);
@@ -116,7 +116,7 @@ test('Nyanya: same seed and input log give the same distance (ghost / replay)', 
   assert.notEqual(replay('nyanya-seed-2', T, toggles), f.dist, 'a different seed is a different course');
 });
 
-test('Shisima: rules, centre lines, repetition draw, AI never misses a win in one', () => {
+test('Water Bugs: rules, centre lines, repetition draw, AI never misses a win in one', () => {
   const s0 = shis.initialState('shisima-test');
   assert.equal(s0.board.filter((v) => v === 1).length, 3);
   assert.equal(s0.board.filter((v) => v === 2).length, 3);

@@ -78,7 +78,7 @@ export function ensureRegistered() {
   const p = player();
   if (p.registered) return Promise.resolve(p);
   if (!registering) {
-    registering = raw('POST', '/player', { id: p.id, secret: p.secret, cohort: p.cohort, lang: prefs.lang }, false)
+    registering = raw('POST', '/player', { id: p.id, secret: p.secret, cohort: p.cohort, lang: 'en' }, false)
       .then((res) => savePlayer({ registered: true, cohort: res.cohort || p.cohort, name: res.handle || p.name }))
       .finally(() => { registering = null; });
   }

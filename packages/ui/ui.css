@@ -105,7 +105,7 @@ h1,h2,h3{font-family:var(--font-display);font-weight:400;line-height:1.08;margin
 .chez-bar .title{flex:1;min-width:0;font-family:var(--font-display);font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chez-bar .icon-btn{width:40px;height:40px;min-width:40px;box-shadow:0 2px 0 var(--line)}
 .coins{display:inline-flex;align-items:center;gap:5px;font-weight:700;white-space:nowrap;text-decoration:none;color:var(--ink);min-height:44px;padding:0 4px}
-.coin{width:20px;height:20px;border-radius:50%;background:var(--tape);border:2.5px solid var(--line);display:inline-grid;place-items:center;font:700 11px var(--font-ui);color:#1B1D1E}
+.coin{width:20px;height:20px;flex:none;display:inline-block;vertical-align:middle}
 .logo{display:inline-flex;align-items:center;height:28px;text-decoration:none}
 .logo svg{height:28px;width:auto}
 .logo .able{fill:var(--wordmark-able)}

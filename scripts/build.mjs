@@ -95,7 +95,7 @@ if (!noVite) {
     }
   }
   await walk(dist);
-  const precache = files.filter((f) => /^\/(index\.html|manifest\.webmanifest|shell\/|assets\/|icons\/(icon-192|favicon))/.test(f) && !f.endsWith('.map'));
+  const precache = files.filter((f) => /^\/(index\.html|manifest\.webmanifest|shell\/|assets\/|icons\/(icon-192|favicon|coin))/.test(f) && !f.endsWith('.map'));
   precache.push('/');
   const version = hashOf(Buffer.from(JSON.stringify(precache) + (await Promise.all(precache.filter((f) => f !== '/').map(async (f) => (await stat(path.join(dist, f))).size))).join(',')));
   let sw = await readFile(r('apps/web/sw.template.js'), 'utf8');

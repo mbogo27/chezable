@@ -22,8 +22,8 @@ database_name = "chezable"
 database_id = "8de096af-0ab6-4c36-93db-8d0bcb36c2f3"
 migrations_dir = "migrations"
 
-[vars]
-PUBLIC_ORIGIN = ""     # empty: use the request's origin (works for previews and localhost)
+# PUBLIC_ORIGIN (optional): base URL for challenge links. Unset in production (the request host is used);
+# set in apps/worker/.dev.vars for local dev, because wrangler dev rewrites the host to the routes above.
 
 [observability]
 enabled = true

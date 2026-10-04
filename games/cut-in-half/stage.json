@@ -1,0 +1,97 @@
+{
+  "id": "cut-in-half",
+  "version": "1.0.0",
+  "order": 2,
+  "title": {
+    "en": "Cut It in Half"
+  },
+  "rule": {
+    "en": "Stop the sliding saw at exactly 50 cm. Three cuts; the lowest total wins."
+  },
+  "howto": {
+    "en": [
+      "The saw slides along a 100 cm plank.",
+      "Tap, or press Space, to cut when it's at 50 cm.",
+      "Three cuts, each faster. Your score is the total distance off."
+    ]
+  },
+  "modes": [
+    "solo",
+    "h2h",
+    "pass"
+  ],
+  "score": {
+    "order": "asc",
+    "min": 0,
+    "max": 150,
+    "decimals": 1,
+    "template": {
+      "en": "{s} cm off"
+    }
+  },
+  "tiebreak": {
+    "en": "smallest single-cut error"
+  },
+  "duration": {
+    "minMs": 2500,
+    "maxMs": 600000
+  },
+  "seeded": true,
+  "assist": true,
+  "variants": {
+    "classic": {
+      "notation": "D01 | V02 × U01 → S03+S04 → P01+P03",
+      "chezability": 1
+    },
+    "native": {
+      "id": "bila-kuhesabu",
+      "label": {
+        "en": "No Numbers"
+      },
+      "desc": {
+        "en": "No guide line and no numbers until all three cuts are done. Judge the half by eye."
+      },
+      "notation": "D01 | V02 × U01+U10 ⊕ M44 → S03 → P03 [O05 on Igisoro]",
+      "chezability": 4,
+      "source": {
+        "en": "Igisoro, where masters never count their seeds openly"
+      }
+    }
+  },
+  "tunables": {
+    "rounds": 3,
+    "speeds": [
+      1.55,
+      2.15,
+      2.85
+    ],
+    "jitter": 0.16,
+    "sway": 0.22,
+    "amp": 0.42
+  },
+  "share": {
+    "payload": "P03"
+  },
+  "card": {
+    "color": "#E9B978",
+    "icon": "🪚"
+  },
+  "strings": {
+    "en": {
+      "kn_tap": "Tap anywhere to cut",
+      "kn_target": "Stop the saw at 50 cm",
+      "kn_cut": "Cut {n} of {m}",
+      "kn_next": "Next cut",
+      "kn_see": "See results",
+      "kn_off": "{a} cm and {b} cm, {e} cm off",
+      "kn_hidden": "Cut made. Numbers stay hidden until the end.",
+      "kn_r0": "Perfect half",
+      "kn_r1": "Razor close",
+      "kn_r2": "Close",
+      "kn_r3": "Wobbly",
+      "kn_r4": "Way off",
+      "kn_line": "I cut a 100 cm plank in half three times and ended up {n} cm off",
+      "kn_cuts": "Cuts: {list}"
+    }
+  }
+}

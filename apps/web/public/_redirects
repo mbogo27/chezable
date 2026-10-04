@@ -1,0 +1,16 @@
+# Old Swahili game URLs → English names (renamed 2026-10-04). Query strings (e.g. ?mode=daily) are kept.
+/g/kata-tufaha/* /g/apple-slicer/:splat 301
+/g/kata-nusu/* /g/cut-in-half/:splat 301
+/g/ruka-kapu/* /g/hoop-shot/:splat 301
+/g/toka/* /g/arrow-puzzle/:splat 301
+/g/kifuniko/* /g/cap-drop/:splat 301
+/g/kata-ndimu/* /g/lemon-squeeze/:splat 301
+/g/shisima/* /g/water-bugs/:splat 301
+/g/zamia/* / 302
+/top/kata-tufaha /top/apple-slicer 301
+/top/kata-nusu /top/cut-in-half 301
+/top/ruka-kapu /top/hoop-shot 301
+/top/toka /top/arrow-puzzle 301
+/top/kifuniko /top/cap-drop 301
+/top/kata-ndimu /top/lemon-squeeze 301
+/top/shisima /top/water-bugs 301

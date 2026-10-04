@@ -1,0 +1,89 @@
+{
+  "id": "water-bugs",
+  "version": "1.0.0",
+  "order": 9,
+  "title": {
+    "en": "Water Bugs"
+  },
+  "rule": {
+    "en": "Move your three water bugs to make a line through the centre."
+  },
+  "howto": {
+    "en": [
+      "Tap one of your bugs, then an empty point next to it along a line.",
+      "Three in a row wins, but the line must pass through the centre: the water.",
+      "The same position three times is a draw. Keyboard: Tab to a point, Enter to pick and to move."
+    ]
+  },
+  "modes": [
+    "solo",
+    "daily",
+    "pass"
+  ],
+  "turnBased": true,
+  "passCustom": true,
+  "score": {
+    "order": "desc",
+    "min": 0,
+    "max": 3,
+    "template": {
+      "en": "{s} pts"
+    }
+  },
+  "tiebreak": {
+    "en": "fewer moves"
+  },
+  "duration": {
+    "minMs": 1500,
+    "maxMs": 7200000
+  },
+  "seeded": true,
+  "assist": false,
+  "variants": {
+    "classic": {
+      "notation": "D01 | V06 × U03 ⊕ M57+M32+M38 → S03+S08 → P03 [O04, O10 on Shisima]",
+      "chezability": 4,
+      "source": {
+        "en": "Shisima, played by the Tiriki of western Kenya. The pieces, imbalavali, are water bugs racing to the water."
+      }
+    }
+  },
+  "tunables": {
+    "aiDepth": 5
+  },
+  "share": {
+    "payload": "P03"
+  },
+  "card": {
+    "color": "#2F8FD8",
+    "icon": "💧"
+  },
+  "strings": {
+    "en": {
+      "sh_you": "You",
+      "sh_ai": "Computer",
+      "sh_your_move": "Your move",
+      "sh_their_move": "{name} is thinking…",
+      "sh_waiting": "Waiting for {name} to move. We'll check every few seconds.",
+      "sh_pick": "Pick one of your bugs",
+      "sh_where": "Now pick where it goes",
+      "sh_win": "You win!",
+      "sh_lose": "{name} wins",
+      "sh_draw": "Draw: the same position came up three times",
+      "sh_moves": "{n} moves",
+      "sh_share_turn": "Your move in Water Bugs:",
+      "sh_send": "Send the link",
+      "sh_created": "Game started. Make your first move, then send the link.",
+      "sh_line_win": "I beat the computer in {n} moves",
+      "sh_line": "I played a game",
+      "sh_point": "Point {p}",
+      "sh_centre": "Centre (the water)",
+      "sh_empty": "empty",
+      "sh_mine": "your bug",
+      "sh_theirs": "their bug",
+      "sh_turn_of": "{name}'s turn",
+      "sh_again": "New game",
+      "sh_refresh": "Check now"
+    }
+  }
+}

@@ -46,13 +46,13 @@ export function migrate() {
     if (!b[k]) b[k] = { score: +score, at: Date.now() };
     set('best:' + slug, b);
   };
-  best('kata-tufaha', 'solo', parseFloat(raw('tufaha.best')));
-  best('kata-nusu', 'solo', parseFloat(raw('halfcut.best')));
+  best('apple-slicer', 'solo', parseFloat(raw('tufaha.best')));
+  best('cut-in-half', 'solo', parseFloat(raw('halfcut.best')));
   best('nyanya-jetpack', 'solo', parseFloat(raw('nyanya.best')));
-  best('kata-ndimu', 'solo', parseFloat(raw('ndimu.best')));
-  best('ruka-kapu', 'solo', parseFloat(raw('kapu.best')));
-  const tl = parseInt(raw('toka.level')); if (tl > 1) set('level:toka', tl);
-  const kl = parseInt(raw('kifuniko.level')); if (kl > 1) set('level:kifuniko', kl);
+  best('lemon-squeeze', 'solo', parseFloat(raw('ndimu.best')));
+  best('hoop-shot', 'solo', parseFloat(raw('kapu.best')));
+  const tl = parseInt(raw('toka.level')); if (tl > 1) set('level:arrow-puzzle', tl);
+  const kl = parseInt(raw('kifuniko.level')); if (kl > 1) set('level:cap-drop', kl);
   let muted = false;
   const old = [];
   try {

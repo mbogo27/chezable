@@ -3,23 +3,16 @@
   "version": "1.0.0",
   "order": 4,
   "title": {
-    "en": "Nyanya Jetpack",
-    "sw": "Nyanya Jetpack"
+    "en": "Nyanya Jetpack"
   },
   "rule": {
-    "en": "Hold to fire the jetpack and keep the tomato off the spikes.",
-    "sw": "Shikilia kuwasha jetpack na uiepushe nyanya na miiba."
+    "en": "Hold to fire the jetpack and keep the tomato off the spikes."
   },
   "howto": {
     "en": [
       "Hold anywhere, or hold Space, to fire the jetpack. Let go to drop.",
       "Stay between the spikes and dodge the mines.",
       "Bronze, Silver, Gold and up to Legend. In a challenge you race your friend's ghost."
-    ],
-    "sw": [
-      "Shikilia popote, au shikilia Space, kuwasha jetpack. Achia kushuka.",
-      "Baki kati ya miiba na ukwepe mabomu.",
-      "Shaba, Fedha, Dhahabu hadi Gwiji. Kwenye changamoto unashindana na kivuli cha rafiki yako."
     ]
   },
   "modes": [
@@ -33,8 +26,7 @@
     "max": 20000,
     "decimals": 1,
     "template": {
-      "en": "{s} m",
-      "sw": "m {s}"
+      "en": "{s} m"
     }
   },
   "duration": {
@@ -51,19 +43,16 @@
     "native": {
       "id": "okoa",
       "label": {
-        "en": "Okoa",
-        "sw": "Okoa"
+        "en": "Rescue"
       },
       "desc": {
-        "en": "Crash, and you can send a rescue link. A friend who catches your falling tomato within 10 seconds brings you back, and you carry on from the crash.",
-        "sw": "Ukianguka, unaweza kutuma kiungo cha uokoaji. Rafiki akidaka nyanya yako ndani ya sekunde 10 anakurudisha, na unaendelea ulipoanguka."
+        "en": "Crash, and you can send a rescue link. A friend who catches your falling tomato within 10 seconds brings you back, and you carry on from the crash."
       },
       "revive": true,
       "notation": "D13+D07 | V03 × U01+U12 ⊕ M82+M95 → S13 → P05 [O10 on kati]",
       "chezability": 4,
       "source": {
-        "en": "kati, where catching the ball brings an eliminated player back",
-        "sw": "kati, ambapo kudaka mpira humrudisha mchezaji aliyetolewa"
+        "en": "kati, where catching the ball brings an eliminated player back"
       }
     }
   },
@@ -106,28 +95,6 @@
       "tier_Diamond": "Diamond",
       "tier_Champion": "Champion",
       "tier_Legend": "Legend"
-    },
-    "sw": {
-      "ny_hold": "Shikilia kuruka",
-      "ny_keep": "Shikilia kuendelea kuruka",
-      "ny_tier": "Umefika {tier}",
-      "ny_next": "{tier} inaanza m {m}",
-      "ny_line": "Nimefika {tier} kwa m {n}",
-      "ny_okoa": "Mwombe rafiki akuokoe",
-      "ny_okoa_text": "Nimeanguka m {n} kwenye Nyanya Jetpack. Daka nyanya yangu ndani ya sekunde 10 unirudishe:",
-      "ny_catch": "Daka nyanya!",
-      "ny_caught": "Umedaka! Umemwokoa.",
-      "ny_missed": "Umekosa. Nyanya imeponyoka.",
-      "ny_ghost": "Kivuli: {name}",
-      "ny_back": "Umerudi angani kutoka m {n}",
-      "ny_secs": "sek {n}",
-      "tier_Bronze": "Shaba",
-      "tier_Silver": "Fedha",
-      "tier_Gold": "Dhahabu",
-      "tier_Platinum": "Platinamu",
-      "tier_Diamond": "Almasi",
-      "tier_Champion": "Bingwa",
-      "tier_Legend": "Gwiji"
     }
   }
 }

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arrow Puzzle · Chezable</title>
+<meta name="description" content="Tap arrows to slide them off the board, without letting one hit another.">
+<meta name="theme-color" content="#5271FF">
+<meta property="og:title" content="Arrow Puzzle · Chezable">
+<meta property="og:description" content="Tap arrows to slide them off the board, without letting one hit another.">
+<meta property="og:image" content="/og/arrow-puzzle.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/shell/ui.css">
+<link rel="stylesheet" href="/g/arrow-puzzle/style.css">
+</head>
+<body>
+<main id="stage" aria-label="Arrow Puzzle. Tap arrows to slide them off the board without hitting another arrow.">
+  <div class="stage-hud">
+    <div class="hud-score"><b id="lvl">Arrow Puzzle</b><span id="left"></span></div>
+    <div class="spacer"></div>
+    <div id="hearts" role="img" aria-label="Hearts"></div>
+  </div>
+  <div class="stage-canvas board-wrap" id="play"><canvas id="cv" tabindex="0" role="application" aria-label="Arrow board"></canvas></div>
+  <div class="tools">
+    <button class="icon-btn" id="hintBtn" aria-label="Hint">💡<span class="badge" id="hintN">3</span></button>
+    <button class="icon-btn" id="gridBtn" aria-label="Grid" aria-pressed="false">#</button>
+    <button class="icon-btn" id="restart" aria-label="Restart">↻</button>
+  </div>
+</main>
+<script src="/shell/chez.js"></script>
+<script type="module" src="/g/arrow-puzzle/game.js"></script>
+</body>
+</html>

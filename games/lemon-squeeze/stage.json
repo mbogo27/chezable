@@ -1,0 +1,93 @@
+{
+  "id": "lemon-squeeze",
+  "version": "1.0.0",
+  "order": 7,
+  "title": {
+    "en": "Lemon Squeeze"
+  },
+  "rule": {
+    "en": "Swipe to cut the lemon and drain the pieces without flies into the glass."
+  },
+  "howto": {
+    "en": [
+      "Swipe all the way across the lemon to cut it.",
+      "The piece without flies drops and drains into the glass. Fill it to 100%.",
+      "Cut through a fly and it's over. Each lemon brings more flies and fewer cuts."
+    ]
+  },
+  "modes": [
+    "solo",
+    "h2h"
+  ],
+  "score": {
+    "order": "desc",
+    "min": 0,
+    "max": 500,
+    "template": {
+      "en": "{s} lemons juiced"
+    },
+    "templateOne": {
+      "en": "1 lemon juiced"
+    }
+  },
+  "tiebreak": {
+    "en": "fewer total cuts"
+  },
+  "duration": {
+    "minMs": 1000,
+    "maxMs": 3600000
+  },
+  "seeded": true,
+  "assist": true,
+  "variants": {
+    "classic": {
+      "notation": "D05+D01 | V05/V08 × U01 → S01 → P01",
+      "chezability": 1
+    },
+    "native": {
+      "id": "panga-nzi",
+      "label": {
+        "en": "Place the Flies"
+      },
+      "desc": {
+        "en": "When you send a challenge, you place the flies first. Your layout becomes your friend's board."
+      },
+      "notation": "D01+D12 | V05+V06 × U01+U03 ⊕ M22 → S03 → P03 [O02+O07 on Kiothi]",
+      "chezability": 4,
+      "source": {
+        "en": "Kiothi, where a player may redistribute one pit's seeds anywhere on the board before play"
+      }
+    }
+  },
+  "tunables": {
+    "capacity": 0.75,
+    "flyR": 0.13,
+    "maxFlies": 5
+  },
+  "share": {
+    "payload": "P03"
+  },
+  "card": {
+    "color": "#FFD21F",
+    "icon": "🍋"
+  },
+  "strings": {
+    "en": {
+      "kd_lemon": "Lemon {n}",
+      "kd_cuts": "Cuts left {n}",
+      "kd_swipe": "Swipe across the lemon",
+      "kd_across": "Swipe all the way across",
+      "kd_both": "Flies on both sides",
+      "kd_juiced": "Lemon juiced!",
+      "kd_fly": "You sliced a fly",
+      "kd_out": "Out of cuts",
+      "kd_line": "I juiced {n} lemons before the flies got me",
+      "kd_place": "Place your flies",
+      "kd_place_body": "Tap the lemon to place up to 5 flies. Your friend's first lemons start with your layout.",
+      "kd_place_done": "Send this board",
+      "kd_place_clear": "Clear",
+      "kd_placed": "{n} of 5 flies placed",
+      "kd_from": "Board set by {name}"
+    }
+  }
+}

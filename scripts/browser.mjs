@@ -89,6 +89,33 @@ for (const g of cat.games) {
   await page.close();
 }
 
+// --- Today's set: every daily link (?mode=daily) must start a run without the intro card, and finish
+if (!only.length || only.includes('daily')) {
+  const ctxD = await browser.createBrowserContext();
+  for (const g of cat.games.filter((x) => (x.modes || []).includes('daily'))) {
+    const page = await ctxD.newPage();
+    await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+    page.setDefaultTimeout(90000); page.setDefaultNavigationTimeout(90000);
+    const errs = []; page.on('pageerror', (e) => errs.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && /onPlay/.test(m.text())) errs.push(m.text()); });
+    await page.goto(`${BASE}/daily`, { waitUntil: 'networkidle0' });
+    await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle0' }), page.click(`a[href="/g/${g.id}/?mode=daily"]`)]);
+    const intro = !!(await page.$('.overlay.show [data-mode]'));
+    const t0 = Date.now();
+    let done = false;
+    while (!done && Date.now() - t0 < 120000) {
+      const auto = await page.evaluate(() => { if (typeof window.__chezAuto === 'function') { window.__chezAuto(); return true; } return false; });
+      if (!auto) await page.keyboard.press('Space');
+      await new Promise((r) => setTimeout(r, 180));
+      done = !!(await page.$('.sheet .result-score, .sheet .vs, .sheet h2'));
+    }
+    const ok = done && !intro && !errs.length;
+    if (!ok) failures++;
+    log(`${ok ? '✓' : '✗'} Today → ${g.id.padEnd(15)} ${intro ? '(intro card shown instead of the daily run) ' : ''}${done ? 'reached the result sheet' : 'never finished'}${errs.length ? ' ' + errs.join('; ') : ''}`);
+    await page.close();
+  }
+  await ctxD.close();
+}
+
 // --- the core loop through the UI: A challenges, B (a brand-new player in a fresh profile) accepts
 async function playToSheet(page, timeout = 120000) {
   const end = Date.now() + timeout;
@@ -109,7 +136,7 @@ if (!only.length || only.includes('challenge')) {
     p.errors = []; p.on('pageerror', (e) => p.errors.push(e.message));
     await p.evaluateOnNewDocument(() => { Object.defineProperty(navigator, 'share', { value: undefined }); });
   }
-  const game = 'toka';
+  const game = 'arrow-puzzle';
   await A.goto(`${BASE}/g/${game}/`, { waitUntil: 'networkidle0' });
   await A.evaluate(() => { document.querySelector('[data-variant=classic]')?.click(); document.querySelector('[data-mode=solo]').click(); });
   let ok = await playToSheet(A);
@@ -127,6 +154,7 @@ if (!only.length || only.includes('challenge')) {
     await B.click('[data-accept]');
     ok = await playToSheet(B);
     const vs = ok && (await B.$('.sheet .vs')) ? await B.$eval('.sheet', (s) => s.innerText.replace(/\s+/g, ' ').slice(0, 90)) : null;
+    if (!vs) log('  B sheet:', ok, await B.evaluate(() => (document.querySelector('.sheet') || document.querySelector('.overlay.show') || {}).innerText));
     log(`${vs ? '✓' : '✗'} B's result shows the comparison: ${vs}`);
     if (!vs) failures++;
     const sendBack = await B.$('[data-a=sendback]');
@@ -140,7 +168,7 @@ if (!only.length || only.includes('challenge')) {
   const ctxP = await browser.createBrowserContext(), P = await ctxP.newPage();
   await P.setViewport({ width: 390, height: 844 }); P.setDefaultTimeout(90000); P.setDefaultNavigationTimeout(90000);
   P.errors = []; P.on('pageerror', (e) => P.errors.push(e.message));
-  await P.goto(`${BASE}/g/kata-nusu/`, { waitUntil: 'networkidle0' });
+  await P.goto(`${BASE}/g/cut-in-half/`, { waitUntil: 'networkidle0' });
   await P.evaluate(() => { document.querySelector('[data-variant=classic]')?.click(); document.querySelector('[data-mode=pass]').click(); });
   await P.waitForSelector('#pn1');
   await P.type('#pn1', 'Achieng'); await P.type('#pn2', 'Kamau');

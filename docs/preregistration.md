@@ -7,7 +7,7 @@
 Experiment:          Chezable MVP — Classic (borrowed) vs Native (Chezability) variants
 Hypothesis H1:       Native variants have a higher session-replay rate than Classic, pooled across games
 Hypothesis H2:       Native variants have a higher challenge-send rate than Classic
-Hypothesis H3:       Nyanya Okoa (rescue) produces more new-player recruits per crash than Nyanya Classic challenges
+Hypothesis H3:       Nyanya Rescue (Okoa) produces more new-player recruits per crash than Nyanya Classic challenges
 Falsifier:           Native ≤ Classic on H1 and H2 after the sample below → the charter's claim fails for this set
 Comparison:          Classic variant of the same game
 Sample / window:     first 4 weeks after launch, or 1,000 finished runs per arm, whichever is later
@@ -20,8 +20,8 @@ Result:              published on Kongo Kega, win or loss
 - Every new player is randomly assigned at creation: 80% Classic-default, 20% Native-default (`players.variant_cohort`, drawn on the device and stored by `POST /api/player`).
 - Native modes unlock for everyone at level 2 (100 XP). Players can switch variant on any game's intro card.
 - **The analysis compares by first-assigned cohort** (intention to treat), not by which variant a run used.
-- Kata Tufaha's Native (Kati) is pass-the-phone only, so it contributes to H1 through pass sessions and is excluded from H2.
-- Shisima has no Classic arm. It is native as built, and its numbers are reported separately as a native control.
+- Apple Slicer's Native (Block Mode, from kati) is pass-the-phone only, so it contributes to H1 through pass sessions and is excluded from H2.
+- Water Bugs (Shisima) has no Classic arm. It is native as built, and its numbers are reported separately as a native control.
 
 ## Metric definitions (from the event stream, `events` table)
 
@@ -29,7 +29,7 @@ Result:              published on Kongo Kega, win or loss
 |---|---|---|
 | Session replay | sessions with ≥ 2 `run.finish` events for the same game | `session.start`, `run.finish` |
 | Challenge-send rate | finished runs that create a challenge (`challenge.create`) ÷ finished runs | `run.finish`, `challenge.create` |
-| Recruits per crash (H3) | Okoa revive challenges answered by players created after the challenge ÷ Nyanya Native crashes; vs the same for Classic Nyanya challenges | `challenges`, `challenge_entries`, `players.created_at`, edge kind `recruited` |
+| Recruits per crash (H3) | Rescue (revive) challenges answered by players created after the challenge ÷ Nyanya Native crashes; vs the same for Classic Nyanya challenges | `challenges`, `challenge_entries`, `players.created_at`, edge kind `recruited` |
 | TTFF | `run.first_input` minus `stage.open` | |
 | First-atom close | `run.first_atom` minus `run.start` | |
 
@@ -41,4 +41,4 @@ Each game's own block is in `games/<slug>/README.md`.
 
 ## Changes
 
-_None yet._
+- 2026-10-04, before launch: games renamed to English (e.g. Toka → Arrow Puzzle), UI made English-only, and Zamia removed from the set. The hypotheses are unchanged; Zamia has no arm in the analysis.
