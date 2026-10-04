@@ -183,6 +183,16 @@ let buffer = [];
 let timer = null;
 export function track(name, props = {}, game = null) {
   buffer.push({ name, game, props, ts: Date.now(), session: sessionId() });
+  // also to Google Analytics (GA4), so the events show in a dashboard straight away (spec v1 §A5).
+  // GA event names can't contain dots; only flat values are sent, and never names, IDs or typed text.
+  try {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      const flat = {};
+      for (const [k, v] of Object.entries(props || {})) if (v == null || ['string', 'number', 'boolean'].includes(typeof v)) flat[k] = v;
+      if (game && flat.game == null) flat.game = game;
+      window.gtag('event', name.replace(/[^a-zA-Z0-9_]/g, '_'), flat);
+    }
+  } catch (e) {}
   if (buffer.length >= 20) flushEvents();
   else if (!timer) timer = setTimeout(flushEvents, 12000);
 }

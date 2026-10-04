@@ -2,9 +2,13 @@
    outlined score text, bottom sheet, toast, shell bar, stage layout. Depends on tokens.css. */
 *,*::before,*::after{box-sizing:border-box}
 html{height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-body{margin:0;min-height:100%;color:var(--ink);font-family:var(--font-ui);font-weight:500;line-height:1.4;
-  background:radial-gradient(circle,var(--hole) 2.2px,transparent 2.7px) 0 0/24px 24px,var(--board);
-  background-color:var(--board);-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100%;color:var(--ink);font-family:var(--font-ui);font-weight:500;line-height:1.4;-webkit-tap-highlight-color:transparent;
+  background-color:var(--bg-base);
+  background-image:
+    radial-gradient(60vmax 60vmax at 105% -10%, var(--bg-shape-1), transparent 60%),
+    radial-gradient(50vmax 50vmax at -10% 110%, var(--bg-shape-2), transparent 60%),
+    radial-gradient(40vmax 40vmax at 85% 95%, var(--bg-shape-3), transparent 65%);
+  background-attachment:fixed}
 a{color:var(--chez-blue-ink)}
 button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--tape);outline-offset:3px}
@@ -165,3 +169,36 @@ body.chez-game{height:100dvh}
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
 }
 html[data-reduced-motion="1"] *,html[data-reduced-motion="1"] *::before,html[data-reduced-motion="1"] *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+
+/* ---------- spec v1: Home, end screens, landing, beat target ---------- */
+.home-btn{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:4px 12px 4px 8px;border:3px solid var(--line);border-radius:999px;background:var(--paper);color:var(--ink);text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 2px 0 var(--line);flex:none}
+.home-btn:active{transform:translateY(2px);box-shadow:none}
+.intro-foot,.es-foot{display:flex;justify-content:center;gap:22px;flex-wrap:wrap}
+.es-link{display:inline-flex;align-items:center;min-height:44px;padding:0 6px;font-weight:700;color:var(--chez-blue-ink);text-decoration:underline;text-underline-offset:3px}
+.notice{margin:0;padding:10px 12px;border-radius:12px;background:var(--chip);font-weight:600}
+.hl{color:var(--chez-blue-ink);font-weight:400}
+.big-play{min-height:64px;font-size:22px}
+.howto-line{margin:-2px 0 0;text-align:center;color:var(--muted);font-weight:600;font-size:15px}
+.copy-fallback input{font:600 15px var(--font-ui);user-select:all;-webkit-user-select:all}
+.beat-pill{position:fixed;left:50%;top:calc(var(--bar-h) + var(--safe-t) + 8px);transform:translateX(-50%);z-index:35;padding:6px 14px;border-radius:999px;border:3px solid var(--line);background:var(--tape);color:#1B1D1E;font-weight:700;font-size:15px;box-shadow:0 3px 0 var(--line);pointer-events:none;white-space:nowrap}
+.endscreen{position:fixed;inset:0;z-index:60;overflow-y:auto;background-color:var(--bg-base);
+  background-image:radial-gradient(60vmax 60vmax at 105% -10%, var(--bg-shape-1), transparent 60%),radial-gradient(50vmax 50vmax at -10% 110%, var(--bg-shape-2), transparent 60%);
+  padding:calc(var(--safe-t) + 16px) 16px calc(var(--safe-b) + 16px)}
+.es-inner{max-width:460px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.es-head{font-size:clamp(26px,7.5vw,34px);line-height:1.1;overflow-wrap:anywhere}
+.es-score{display:flex;flex-direction:column;gap:4px}
+.es-score p{margin:0}
+.es-score .vs .side span,.es-score .vs .side b{overflow-wrap:anywhere}
+.es-meta,.es-sub{font-size:15px}
+.es-media{display:flex;align-items:center;gap:14px;min-height:120px;padding:14px;border:3px solid var(--line);border-radius:var(--radius-card);background:var(--c);box-shadow:0 6px 0 var(--line);aspect-ratio:16/7}
+.es-media-icon{font-size:56px;line-height:1}
+.es-media-score{font-family:var(--font-display);font-size:clamp(26px,8vw,40px);color:#fff;-webkit-text-stroke:3px var(--line);paint-order:stroke fill;overflow-wrap:anywhere}
+.es-actions{display:flex;flex-direction:column;gap:10px}
+.es-claim{display:flex;flex-direction:column;gap:8px;padding:14px;border:3px solid var(--line);border-radius:18px;background:var(--paper)}
+.es-claim-label{font-weight:700}
+.es-claim-row{display:flex;gap:8px}
+.es-claim-row input{flex:1;min-width:0;font:600 18px var(--font-ui);padding:10px 12px;border-radius:12px;border:3px solid var(--line);background:var(--board);color:var(--ink);min-height:48px}
+.es-claim .hint{margin:0;font-size:14px;color:var(--muted)}
+.es-claim .error{margin:0;min-height:0}
+.es-claim-actions{display:flex;flex-direction:column;gap:8px}
+.es-claim-chip{align-self:flex-start;cursor:pointer;min-height:36px;border-width:2px}

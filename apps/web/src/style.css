@@ -64,3 +64,6 @@ body{padding-bottom:calc(72px + var(--safe-b))}
 .prose{display:flex;flex-direction:column;gap:12px;font-size:17px;line-height:1.55;max-width:66ch}
 .prose h2{font-size:22px;margin-top:6px}
 .prose p,.prose ul{margin:0}
+.row-right{display:flex;align-items:center;gap:8px}
+.report-btn{min-height:32px;padding:2px 8px;border:2px solid var(--line);border-radius:999px;background:transparent;color:var(--muted);font:700 12px var(--font-ui);cursor:pointer}
+.notice{margin:0;padding:10px 12px;border-radius:12px;background:var(--chip);font-weight:600}

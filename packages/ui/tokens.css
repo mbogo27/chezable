@@ -15,7 +15,11 @@
   --muted:#566166;
   --paper:#FFFFFF;
   --board:#DFE4E2;
-  --hole:rgba(40,58,64,.2);
+  /* page background (spec v1 §A3): calm, light, static; shapes anchored to the corners */
+  --bg-base:#F3F3F3;
+  --bg-shape-1:rgb(82 113 255 / .09);
+  --bg-shape-2:rgb(0 0 0 / .035);
+  --bg-shape-3:rgb(255 255 255 / .7);
   --chip:#EEF1F0;
   --veil:rgba(223,228,226,.66);
   --success:#3FBF6A;
@@ -34,12 +38,12 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --chez-blue-ink:#8EA2FF; --ink:#F2F0EB; --muted:#9DB0B7; --paper:#18242A; --board:#22323A;
-    --hole:rgba(0,0,0,.38); --chip:#22323A; --veil:rgba(20,30,35,.72); --danger:#E5544A; --success-ink:#6FDC93;
+    --bg-base:#1A262C; --bg-shape-1:rgb(82 113 255 / .14); --bg-shape-2:rgb(0 0 0 / .18); --bg-shape-3:rgb(255 255 255 / .04); --chip:#22323A; --veil:rgba(20,30,35,.72); --danger:#E5544A; --success-ink:#6FDC93;
     --wordmark-able:#F2F0EB;
   }
 }
 :root[data-theme="dark"]{
   --chez-blue-ink:#8EA2FF; --ink:#F2F0EB; --muted:#9DB0B7; --paper:#18242A; --board:#22323A;
-  --hole:rgba(0,0,0,.38); --chip:#22323A; --veil:rgba(20,30,35,.72); --danger:#E5544A; --success-ink:#6FDC93;
+  --bg-base:#1A262C; --bg-shape-1:rgb(82 113 255 / .14); --bg-shape-2:rgb(0 0 0 / .18); --bg-shape-3:rgb(255 255 255 / .04); --chip:#22323A; --veil:rgba(20,30,35,.72); --danger:#E5544A; --success-ink:#6FDC93;
   --wordmark-able:#F2F0EB;
 }

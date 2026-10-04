@@ -16,7 +16,7 @@
     "budget": "node scripts/budget.mjs",
     "check": "npm test && npm run typecheck && npm run budget && npm run smoke && npm run browser && npm run a11y",
     "typecheck": "tsc -p apps/worker --noEmit",
-    "assets": "node scripts/assets.mjs",
+    "assets": "node scripts/assets.mjs && node scripts/og-cards.mjs",
     "readmes": "node scripts/readmes.mjs",
     "logo": "node scripts/logo.mjs",
     "fonts": "node scripts/fonts.mjs",

@@ -1,61 +1,6 @@
 {
  "games": [
   {
-   "id": "apple-slicer",
-   "title": {
-    "en": "Apple Slicer"
-   },
-   "rule": {
-    "en": "Throw knives through the gap in the spinning spiked ring to slice the apple."
-   },
-   "modes": [
-    "solo",
-    "h2h",
-    "pass"
-   ],
-   "score": {
-    "order": "desc",
-    "min": 0,
-    "max": 10,
-    "decimals": 0,
-    "template": {
-     "en": "{s} of 10 apples"
-    },
-    "templateOne": {
-     "en": "1 of 10 apples"
-    }
-   },
-   "duration": {
-    "minMs": 2500,
-    "maxMs": 900000
-   },
-   "variants": {
-    "classic": {
-     "notation": "D01+D05 | V02 × U01 ⊕ E20 → S03 → P03",
-     "chezability": 1
-    },
-    "native": {
-     "id": "kati",
-     "label": {
-      "en": "Block Mode"
-     },
-     "desc": {
-      "en": "Two players, one phone. One throws; the other spins the ring to block every knife. Then swap."
-     },
-     "modes": [
-      "pass"
-     ],
-     "passCustom": true,
-     "notation": "D01+D12+D13 | V02+V09-style drag × U01+U03 ⊕ M06+M31 → S04+S11 → P01 [O02 on kati]",
-     "chezability": 4,
-     "source": {
-      "en": "kati, the Kenyan street game where throwers try to hit the dodgers"
-     }
-    }
-   },
-   "assist": true
-  },
-  {
    "id": "cut-in-half",
    "title": {
     "en": "Cut It in Half"
@@ -98,56 +43,6 @@
      "chezability": 4,
      "source": {
       "en": "Igisoro, where masters never count their seeds openly"
-     }
-    }
-   },
-   "assist": true
-  },
-  {
-   "id": "hoop-shot",
-   "title": {
-    "en": "Hoop Shot"
-   },
-   "rule": {
-    "en": "Tap when the power bar is right to shoot into the hoops; higher hoops score more."
-   },
-   "modes": [
-    "solo",
-    "h2h",
-    "pass"
-   ],
-   "score": {
-    "order": "desc",
-    "min": 0,
-    "max": 3000,
-    "template": {
-     "en": "{s} points"
-    },
-    "templateOne": {
-     "en": "1 point"
-    }
-   },
-   "duration": {
-    "minMs": 4000,
-    "maxMs": 300000
-   },
-   "variants": {
-    "classic": {
-     "notation": "D01+D02 | V02 × U01+U05 ⊕ M26+M30 ⊕ E20 → S03 → P03",
-     "chezability": 1
-    },
-    "native": {
-     "id": "niko",
-     "label": {
-      "en": "Call Your Shot"
-     },
-     "desc": {
-      "en": "Before each shot you may call a hoop. A called hit scores double; a called miss scores nothing."
-     },
-     "notation": "D01+D02 | V02+V17 × U01+U13 ⊕ M79+M26 → S03 → P07 [O11 on Kadi]",
-     "chezability": 4,
-     "source": {
-      "en": "Kadi, where you must declare \"Niko Kadi!\" before you're allowed to win"
      }
     }
    },
@@ -201,6 +96,77 @@
     }
    },
    "assist": true
+  },
+  {
+   "id": "cap-drop",
+   "title": {
+    "en": "Cap Drop"
+   },
+   "rule": {
+    "en": "Slide the caps until the gold cap drops down the chute into the glass."
+   },
+   "modes": [
+    "solo",
+    "daily",
+    "h2h"
+   ],
+   "score": {
+    "order": "desc",
+    "min": 0,
+    "max": 9999,
+    "template": {
+     "en": "Level {s}"
+    },
+    "modes": {
+     "daily": {
+      "order": "asc",
+      "min": 1,
+      "max": 999,
+      "template": {
+       "en": "{s} moves"
+      },
+      "templateOne": {
+       "en": "1 move"
+      }
+     },
+     "h2h": {
+      "order": "asc",
+      "min": 1,
+      "max": 999,
+      "template": {
+       "en": "{s} moves"
+      },
+      "templateOne": {
+       "en": "1 move"
+      }
+     }
+    }
+   },
+   "duration": {
+    "minMs": 800,
+    "maxMs": 3600000
+   },
+   "variants": {
+    "classic": {
+     "notation": "D01 | V01/V06 × U02 → S01 → P03",
+     "chezability": 1
+    },
+    "native": {
+     "id": "maji",
+     "label": {
+      "en": "Through the Water"
+     },
+     "desc": {
+      "en": "On odd-sized boards the gold cap must pass through the centre, the water, before it may exit."
+     },
+     "notation": "D01 | V01 × U02 ⊕ M32-style constraint → S08 → P02 [O11 on Shisima]",
+     "chezability": 3,
+     "source": {
+      "en": "Shisima, where a winning line must run through the centre: the water"
+     }
+    }
+   },
+   "assist": false
   },
   {
    "id": "arrow-puzzle",
@@ -274,75 +240,109 @@
    "assist": false
   },
   {
-   "id": "cap-drop",
+   "id": "apple-slicer",
    "title": {
-    "en": "Cap Drop"
+    "en": "Apple Slicer"
    },
    "rule": {
-    "en": "Slide the caps until the gold cap drops down the chute into the glass."
+    "en": "Throw knives through the gap in the spinning spiked ring to slice the apple."
    },
    "modes": [
     "solo",
-    "daily",
-    "h2h"
+    "h2h",
+    "pass"
    ],
    "score": {
     "order": "desc",
     "min": 0,
-    "max": 9999,
+    "max": 10,
+    "decimals": 0,
     "template": {
-     "en": "Level {s}"
+     "en": "{s} of 10 apples"
     },
-    "modes": {
-     "daily": {
-      "order": "asc",
-      "min": 1,
-      "max": 999,
-      "template": {
-       "en": "{s} moves"
-      },
-      "templateOne": {
-       "en": "1 move"
-      }
-     },
-     "h2h": {
-      "order": "asc",
-      "min": 1,
-      "max": 999,
-      "template": {
-       "en": "{s} moves"
-      },
-      "templateOne": {
-       "en": "1 move"
-      }
-     }
+    "templateOne": {
+     "en": "1 of 10 apples"
     }
    },
    "duration": {
-    "minMs": 800,
-    "maxMs": 3600000
+    "minMs": 2500,
+    "maxMs": 900000
    },
    "variants": {
     "classic": {
-     "notation": "D01 | V01/V06 × U02 → S01 → P03",
+     "notation": "D01+D05 | V02 × U01 ⊕ E20 → S03 → P03",
      "chezability": 1
     },
     "native": {
-     "id": "maji",
+     "id": "kati",
      "label": {
-      "en": "Through the Water"
+      "en": "Block Mode"
      },
      "desc": {
-      "en": "On odd-sized boards the gold cap must pass through the centre, the water, before it may exit."
+      "en": "Two players, one phone. One throws; the other spins the ring to block every knife. Then swap."
      },
-     "notation": "D01 | V01 × U02 ⊕ M32-style constraint → S08 → P02 [O11 on Shisima]",
-     "chezability": 3,
+     "modes": [
+      "pass"
+     ],
+     "passCustom": true,
+     "notation": "D01+D12+D13 | V02+V09-style drag × U01+U03 ⊕ M06+M31 → S04+S11 → P01 [O02 on kati]",
+     "chezability": 4,
      "source": {
-      "en": "Shisima, where a winning line must run through the centre: the water"
+      "en": "kati, the Kenyan street game where throwers try to hit the dodgers"
      }
     }
    },
-   "assist": false
+   "assist": true
+  },
+  {
+   "id": "hoop-shot",
+   "title": {
+    "en": "Hoop Shot"
+   },
+   "rule": {
+    "en": "Tap when the power bar is right to shoot into the hoops; higher hoops score more."
+   },
+   "modes": [
+    "solo",
+    "h2h",
+    "pass"
+   ],
+   "score": {
+    "order": "desc",
+    "min": 0,
+    "max": 3000,
+    "template": {
+     "en": "{s} points"
+    },
+    "templateOne": {
+     "en": "1 point"
+    }
+   },
+   "duration": {
+    "minMs": 4000,
+    "maxMs": 300000
+   },
+   "variants": {
+    "classic": {
+     "notation": "D01+D02 | V02 × U01+U05 ⊕ M26+M30 ⊕ E20 → S03 → P03",
+     "chezability": 1
+    },
+    "native": {
+     "id": "niko",
+     "label": {
+      "en": "Call Your Shot"
+     },
+     "desc": {
+      "en": "Before each shot you may call a hoop. A called hit scores double; a called miss scores nothing."
+     },
+     "notation": "D01+D02 | V02+V17 × U01+U13 ⊕ M79+M26 → S03 → P07 [O11 on Kadi]",
+     "chezability": 4,
+     "source": {
+      "en": "Kadi, where you must declare \"Niko Kadi!\" before you're allowed to win"
+     }
+    }
+   },
+   "assist": true
   },
   {
    "id": "lemon-squeeze",

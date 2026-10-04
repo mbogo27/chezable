@@ -1,7 +1,8 @@
 {
   "id": "apple-slicer",
   "version": "1.0.0",
-  "order": 1,
+  "order": 11,
+  "archived": true,
   "title": {
     "en": "Apple Slicer"
   },

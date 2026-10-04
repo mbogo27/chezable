@@ -14,7 +14,7 @@ routes = [
 directory = "../web/dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*", "/c/*", "/b/*"]
+run_worker_first = ["/api/*", "/c/*", "/b/*", "/og/c/*"]
 
 [[d1_databases]]
 binding = "DB"

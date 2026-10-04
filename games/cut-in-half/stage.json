@@ -1,7 +1,8 @@
 {
   "id": "cut-in-half",
   "version": "1.0.0",
-  "order": 2,
+  "order": 1,
+  "featured": true,
   "title": {
     "en": "Cut It in Half"
   },

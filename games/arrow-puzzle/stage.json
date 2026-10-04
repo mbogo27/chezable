@@ -1,7 +1,8 @@
 {
   "id": "arrow-puzzle",
   "version": "1.0.0",
-  "order": 5,
+  "order": 4,
+  "featured": true,
   "title": {
     "en": "Arrow Puzzle"
   },

@@ -1,17 +1,21 @@
 // Chezable API (spec §10.3) and the challenge landing rewrite (§6.3). Static files are served by the
 // assets layer; this Worker only runs for /api/*, /c/* and /b/*.
 import catalogData from './catalog.generated.json';
-import { scoreDef, compareRuns, isBetter, nameProblem, nairobiDay, ID_ABC, RECOVERY_ABC } from '../../../packages/chez-sdk/src/rules.js';
+import { scoreDef, compareRuns, isBetter, nairobiDay, weekKey, ID_ABC, RECOVERY_ABC } from '../../../packages/chez-sdk/src/rules.js';
+import { nameKey } from '../../../packages/chez-sdk/src/names.js';
+import { checkName } from './moderation.js';
+import { admin } from './admin';
 import * as shisima from '../../../games/water-bugs/logic.js';
 import { award, settleLevel, edge, type Award } from './ledger';
 import { Env, Player, HttpError, json, sha256Hex, randomId, authenticate, optionalAuth, rateLimit, origin, readJson, clampStr } from './util';
-import { challengeLanding, brandedStage } from './pages';
+import { challengeLanding, challengeCard, brandedStage } from './pages';
 
 // stage manifests are validated by the build; typed loosely here because each one has its own shape
 type Stage = Record<string, any>;
 const GAMES: Record<string, Stage> = Object.fromEntries((catalogData.games as Stage[]).map((g) => [g.id, g]));
 const DAY = 86400000;
 const CHALLENGE_TTL = 7 * DAY;
+const NEVER = 253402300799000; // year 9999: beat links don't expire in v1 (spec v1 §B2)
 const SPECIAL_MODES = ['okoa', 'revive', 'turn'];
 
 export default {
@@ -20,6 +24,7 @@ export default {
     try {
       if (url.pathname.startsWith('/api/')) return await api(req, env, url, ctx);
       if (url.pathname.startsWith('/c/')) return await challengeLanding(req, env, url, GAMES);
+      if (url.pathname.startsWith('/og/c/')) return await challengeCard(req, env, url, GAMES, ctx);
       if (url.pathname.startsWith('/b/')) return await brandedStage(req, env, url);
       return env.ASSETS.fetch(req);
     } catch (e) {
@@ -46,10 +51,13 @@ async function api(req: Request, env: Env, url: URL, ctx: ExecutionContext): Pro
   if (method === 'GET' && path === '/catalog') return json(catalogData, 200, { 'Cache-Control': 'public, max-age=300' });
   if (method === 'GET' && path === '/health') return json({ ok: true, day: nairobiDay() });
 
+  if (path.startsWith('/admin/')) return admin(req, env, path.slice(6), body, GAMES);
+
   const me = await authenticate(req, env, body);
   if (method === 'GET' && path === '/me') return getMe(env, me);
   if (method === 'POST' && path === '/player/name') return claimName(env, me, body);
   if (method === 'POST' && path === '/player/recovery') return newRecovery(env, me);
+  if (method === 'POST' && path === '/report') return reportName(req, env, me, body);
   if (method === 'POST' && path === '/run/start') return runStart(req, env, me, body);
   if (method === 'POST' && path === '/run/finish') return runFinish(req, env, me, body);
   if (method === 'POST' && path === '/challenge') return createChallenge(req, env, me, body);
@@ -88,22 +96,54 @@ function newCode(): string {
 const formatCode = (c: string) => c.match(/.{1,4}/g)!.join('-');
 const recoveryHash = (env: Env, code: string) => sha256Hex(`${env.PEPPER || 'chezable-dev-pepper'}:${code.toUpperCase().replace(/[^A-Z0-9]/g, '')}`);
 
-async function claimName(env: Env, me: Player, body: string) {
+const NAME_CHANGE_WAIT = 14 * DAY;
+/** Rejections are logged by tier only, never with the text the player typed (spec v1 §B1 "Logging"). */
+async function logEvent(env: Env, playerId: string | null, name: string, props: Record<string, unknown>) {
+  await env.DB.prepare('INSERT INTO events (player_id, name, props, ts) VALUES (?, ?, ?, ?)').bind(playerId, name, JSON.stringify(props), Date.now()).run();
+}
+
+async function claimName(env: Env, me: Player & Record<string, any>, body: string) {
   const b = await readJson(body);
   const name = String(b.name || '').trim();
-  const problem = nameProblem(name);
-  if (problem) throw new HttpError(422, problem);
-  const taken = await env.DB.prepare('SELECT id FROM players WHERE lower(handle) = lower(?) AND id != ?').bind(name, me.id).first();
-  if (taken) throw new HttpError(409, 'name_taken');
-  await rateLimit(env, `name:${me.id}`, 10, DAY);
-  let recovery: string | null = null;
-  if (!me.recovery_hash) {
-    recovery = newCode();
-    await env.DB.prepare('UPDATE players SET handle = ?, recovery_hash = ? WHERE id = ?').bind(name, await recoveryHash(env, recovery), me.id).run();
-  } else {
-    await env.DB.prepare('UPDATE players SET handle = ? WHERE id = ?').bind(name, me.id).run();
+  await rateLimit(env, `name:${me.id}`, 20, DAY);
+  const verdict = checkName(name);
+  if (!verdict.ok) {
+    await logEvent(env, me.id, 'name_rejected', { tier: verdict.tier });
+    // format problems get a helpful hint; anything from moderation gets the generic message
+    throw new HttpError(422, verdict.tier === 'format' ? 'name_invalid' : 'name_blocked');
   }
-  return json({ handle: name, recovery: recovery ? formatCode(recovery) : null });
+  const key = nameKey(name);
+  const taken = await env.DB.prepare('SELECT id FROM players WHERE name_normalized = ? AND id != ?').bind(key, me.id).first();
+  if (taken) throw new HttpError(409, 'name_taken');
+  const now = Date.now();
+  const isChange = !!me.handle && me.handle !== name;
+  if (isChange && (me.name_changes || 0) >= 1 && me.name_changed_at && now - me.name_changed_at < NAME_CHANGE_WAIT) {
+    throw new HttpError(429, 'name_change_wait', { nextChangeAt: me.name_changed_at + NAME_CHANGE_WAIT });
+  }
+  const status = verdict.flagged ? 'flagged' : me.status === 'hidden' ? 'hidden' : 'ok';
+  let recovery: string | null = null;
+  if (!me.recovery_hash) recovery = newCode();
+  await env.DB.prepare(
+    `UPDATE players SET handle = ?, name_normalized = ?, status = ?,
+       name_changes = name_changes + ?, name_changed_at = CASE WHEN ? THEN ? ELSE name_changed_at END,
+       recovery_hash = COALESCE(?, recovery_hash) WHERE id = ?`
+  ).bind(name, key, status, isChange ? 1 : 0, isChange ? 1 : 0, now, recovery ? await recoveryHash(env, recovery) : null, me.id).run();
+  await logEvent(env, me.id, 'name_claimed', { change: isChange ? 1 : 0, flagged: verdict.flagged ? 1 : 0 });
+  const changes = (me.name_changes || 0) + (isChange ? 1 : 0);
+  return json({ handle: name, recovery: recovery ? formatCode(recovery) : null, nextChangeAt: changes >= 1 ? (isChange ? now : me.name_changed_at) + NAME_CHANGE_WAIT : null });
+}
+
+/** Report a name (spec v1 §B1). Anyone signed in can report; admins resolve. */
+async function reportName(req: Request, env: Env, me: Player, body: string) {
+  const b = await readJson(body);
+  const ip = req.headers.get('CF-Connecting-IP') || 'local';
+  await rateLimit(env, `report:${me.id}`, 20, DAY);
+  await rateLimit(env, `report-ip:${ip}`, 60, DAY);
+  const target = b.name ? await env.DB.prepare('SELECT id FROM players WHERE name_normalized = ?').bind(nameKey(String(b.name))).first<{ id: string }>() : null;
+  if (!target) throw new HttpError(404, 'no_such_player');
+  await env.DB.prepare('INSERT INTO reports (player_id, reporter_id, reason, created_at) VALUES (?, ?, ?, ?)')
+    .bind(target.id, me.id, clampStr(b.reason, 200), Date.now()).run();
+  return json({ ok: true });
 }
 
 async function newRecovery(env: Env, me: Player) {
@@ -142,7 +182,9 @@ async function getMe(env: Env, me: Player) {
     out.push({ game: r.game, mode: r.mode, variant: r.variant, assist: r.assist, runs: r.runs, best: def.order === 'asc' ? r.lo : r.hi });
   }
   const level = await settleLevel(env, me.id);
-  return json({ id: me.id, handle: me.handle, xp: level.xp, coins: level.coins, level: level.level, cohort: me.variant_cohort, hasRecovery: !!me.recovery_hash, bests: out, createdAt: me.created_at });
+  const mx = me as any;
+  const nextChangeAt = mx.handle && (mx.name_changes || 0) >= 1 && mx.name_changed_at ? mx.name_changed_at + NAME_CHANGE_WAIT : null;
+  return json({ id: me.id, handle: me.handle, nextChangeAt: nextChangeAt && nextChangeAt > Date.now() ? nextChangeAt : null, freeChange: !!mx.handle && !(mx.name_changes >= 1), status: mx.status || 'ok', xp: level.xp, coins: level.coins, level: level.level, cohort: me.variant_cohort, hasRecovery: !!me.recovery_hash, bests: out, createdAt: me.created_at });
 }
 
 /* ======================= daily ======================= */
@@ -194,7 +236,7 @@ async function runStart(req: Request, env: Env, me: Player, body: string) {
     seed = c.seed;
     const expired = c.expires_at < now;
     if (c.kind === 'beat') {
-      if (expired) throw new HttpError(410, 'challenge_expired');
+      if (await challengeHidden(env, c)) throw new HttpError(410, 'challenge_hidden');
       mode = 'h2h';
       const entry = await env.DB.prepare('SELECT 1 FROM challenge_entries WHERE challenge_id = ? AND player_id = ?').bind(c.id, me.id).first();
       counted = !entry && c.creator_id !== me.id;
@@ -235,6 +277,8 @@ function sameGroupModes(g: Stage, mode: string): string[] {
 async function runFinish(req: Request, env: Env, me: Player, body: string) {
   const b = await readJson(body);
   const now = Date.now();
+  await rateLimit(env, `finish:${me.id}`, 150, 3600 * 1000);
+  await rateLimit(env, `finish-ip:${req.headers.get('CF-Connecting-IP') || 'local'}`, 600, 3600 * 1000);
   let run: any;
   if (typeof b.runId === 'string' && b.runId.startsWith('L') && b.local) {
     // finished offline (or pass the phone): create the record now, with T0 checks on the claimed data
@@ -260,7 +304,9 @@ async function runFinish(req: Request, env: Env, me: Player, body: string) {
   const score = Number(b.score);
   const tiebreak = b.tiebreak == null || !isFinite(Number(b.tiebreak)) ? null : Number(b.tiebreak);
   if (!isFinite(score)) throw new HttpError(422, 'bad_score');
-  if (run.mode !== 'okoa' && run.mode !== 'pass' && ((def.min != null && score < def.min) || (def.max != null && score > def.max))) throw new HttpError(422, 'score_out_of_bounds');
+  if (run.mode !== 'okoa' && run.mode !== 'pass' && def.min != null && score < def.min) throw new HttpError(422, 'score_out_of_bounds');
+  // above the plausible maximum: stored, but flagged and kept off public boards until reviewed (spec v1 §B5)
+  const flagged = run.mode !== 'okoa' && run.mode !== 'pass' && def.max != null && score > def.max ? 1 : 0;
   const elapsed = run.local ? Number(b.durationMs) || 0 : now - run.started_at;
   const dur = (g.duration || {}) as { minMs?: number; maxMs?: number };
   if (run.mode !== 'okoa' && run.mode !== 'pass' && dur.minMs && elapsed < dur.minMs) throw new HttpError(422, 'too_fast');
@@ -269,8 +315,13 @@ async function runFinish(req: Request, env: Env, me: Player, body: string) {
   if (b.ghost && Array.isArray(b.ghost) && JSON.stringify(b.ghost).length < 12000) detail.ghost = b.ghost;
   const detailText = JSON.stringify(detail).slice(0, 16000);
   const day = nairobiDay(now);
-  await env.DB.prepare('UPDATE runs SET score = ?, tiebreak = ?, detail = ?, input_hash = ?, finished_at = ?, day = ? WHERE id = ?')
-    .bind(score, tiebreak, detailText, clampStr(b.inputHash, 80), now, day, run.id).run();
+  const week = weekKey(now);
+  // weekly rank before this run counted, so the end screen can say "up {x}"
+  const boardMode = run.mode === 'daily' ? 'daily' : 'solo';
+  const rankable = ['solo', 'daily', 'h2h', 'revive'].includes(run.mode);
+  const before = rankable ? placeIn((await boardRows(env, g, { board: 'week', mode: boardMode, variant: run.variant, assist: run.assist, day, week, meId: me.id, excludeRunId: run.id })).rows, me.id) : null;
+  await env.DB.prepare('UPDATE runs SET score = ?, tiebreak = ?, detail = ?, input_hash = ?, finished_at = ?, day = ?, week_key = ?, flagged = ? WHERE id = ?')
+    .bind(score, tiebreak, detailText, clampStr(b.inputHash, 80), now, day, week, flagged, run.id).run();
 
   const awards: Award[] = [];
   const push = (a: Award | null) => { if (a) awards.push(a); };
@@ -280,7 +331,7 @@ async function runFinish(req: Request, env: Env, me: Player, body: string) {
   if (run.variant === 'native') push(await award(env, me.id, 'native.played', g.id, run.id, now));
 
   // personal best within the same board group, variant and assist flag (pass and rescue runs don't count)
-  let pb = false, best: number | null = null;
+  let pb = false, best: number | null = null, prevBest: number | null = null;
   if (!['pass', 'okoa', 'turn'].includes(run.mode)) {
     const modes = sameGroupModes(g, run.mode);
     const agg = def.order === 'asc' ? 'MIN' : 'MAX';
@@ -288,7 +339,8 @@ async function runFinish(req: Request, env: Env, me: Player, body: string) {
       `SELECT ${agg}(score) AS s FROM runs WHERE player_id = ? AND game = ? AND variant = ? AND assist = ? AND finished_at IS NOT NULL AND id != ? AND mode IN (${modes.map(() => '?').join(',')})`
     ).bind(me.id, g.id, run.variant, run.assist, run.id, ...modes).first<{ s: number | null }>();
     best = prev ? prev.s : null;
-    pb = best != null && isBetter(def, score, best);
+    prevBest = best;
+    pb = best != null && isBetter(def, score, best) && !flagged;
     if (pb) push(await award(env, me.id, 'run.personal_best', g.id, run.id, now));
     best = best == null ? score : pb ? score : best;
   }
@@ -301,9 +353,10 @@ async function runFinish(req: Request, env: Env, me: Player, body: string) {
   if (run.challenge_id) challengeOut = await settleChallengeRun(env, me, run, g, def, score, tiebreak, now, push);
 
   const lvl = await settleLevel(env, me.id);
-  let rank: number | null = null;
-  if (['solo', 'daily', 'h2h'].includes(run.mode)) rank = await todayRank(env, g, run, def, me.id, day);
-  return json({ ok: true, runId: run.id, awards, xp: lvl.xp, coins: lvl.coins, level: lvl.level, levelUp: lvl.levelUp, pb, best, rank, firstPlay, challenge: challengeOut });
+  let rank: number | null = null, next: any = null;
+  if (rankable) ({ rank, next } = placeIn((await boardRows(env, g, { board: 'week', mode: boardMode, variant: run.variant, assist: run.assist, day, week, meId: me.id })).rows, me.id));
+  return json({ ok: true, runId: run.id, awards, xp: lvl.xp, coins: lvl.coins, level: lvl.level, levelUp: lvl.levelUp, pb, best, prevBest, order: def.order,
+    rank, prevRank: before ? before.rank : null, next, flagged: !!flagged, firstPlay, named: !!me.handle, challenge: challengeOut });
 }
 
 async function settleChallengeRun(env: Env, me: Player, run: any, g: Stage, def: any, score: number, tiebreak: number | null, now: number, push: (a: Award | null) => void) {
@@ -356,12 +409,14 @@ async function settleChallengeRun(env: Env, me: Player, run: any, g: Stage, def:
 }
 
 /* ======================= leaderboards ======================= */
+// Spec v1 §B5: per game, weekly (resets Monday 00:00 EAT) and all time; one entry per player (their best);
+// ties go to whoever got there first. Public boards show only named players, never flagged or hidden scores.
 function boardSql(order: string, firstAttempt: boolean) {
   const ord = firstAttempt ? 'r.finished_at ASC' : `r.score ${order === 'asc' ? 'ASC' : 'DESC'}, COALESCE(r.tiebreak, 1e18) ASC, r.finished_at ASC`;
   return `WITH ranked AS (
       SELECT r.player_id, r.score, r.tiebreak, r.finished_at,
              ROW_NUMBER() OVER (PARTITION BY r.player_id ORDER BY ${ord}) AS rn
-      FROM runs r WHERE %WHERE%
+      FROM runs r JOIN players p0 ON p0.id = r.player_id WHERE %WHERE%
     )
     SELECT ranked.player_id, ranked.score, ranked.tiebreak, ranked.finished_at, p.handle
     FROM ranked JOIN players p ON p.id = ranked.player_id
@@ -369,12 +424,19 @@ function boardSql(order: string, firstAttempt: boolean) {
     ORDER BY ranked.score ${order === 'asc' ? 'ASC' : 'DESC'}, COALESCE(ranked.tiebreak, 1e18) ASC, ranked.finished_at ASC`;
 }
 
-async function boardRows(env: Env, g: Stage, opts: { board: string; mode: string; variant: string; assist: number; ids?: string[]; day: string }) {
+type BoardOpts = { board: string; mode: string; variant: string; assist: number; ids?: string[]; day: string; week: string; meId?: string; excludeRunId?: string };
+async function boardRows(env: Env, g: Stage, opts: BoardOpts) {
   const def = scoreDef(g, opts.mode);
   const modes = opts.mode === 'daily' ? ['daily'] : sameGroupModes(g, opts.mode).filter((m) => m !== 'daily');
-  const where = ['r.game = ?', 'r.variant = ?', 'r.assist = ?', 'r.finished_at IS NOT NULL', 'r.score IS NOT NULL', `r.mode IN (${modes.map(() => '?').join(',')})`];
+  const where = ['r.game = ?', 'r.variant = ?', 'r.assist = ?', 'r.finished_at IS NOT NULL', 'r.score IS NOT NULL',
+    'COALESCE(r.flagged, 0) = 0', 'COALESCE(r.hidden, 0) = 0', "COALESCE(p0.status, 'ok') != 'hidden'", `r.mode IN (${modes.map(() => '?').join(',')})`];
   const params: any[] = [g.id, opts.variant, opts.assist, ...modes];
+  // unnamed players only ever see themselves; everyone else needs a claimed name to appear
+  if (opts.meId) { where.push('(p0.handle IS NOT NULL OR r.player_id = ?)'); params.push(opts.meId); }
+  else where.push('p0.handle IS NOT NULL');
+  if (opts.board === 'week') { where.push('r.week_key = ?'); params.push(opts.week); }
   if (opts.board === 'today') { where.push('r.day = ?'); params.push(opts.day); }
+  if (opts.excludeRunId) { where.push('r.id != ?'); params.push(opts.excludeRunId); }
   if (opts.ids) { where.push(`r.player_id IN (${opts.ids.map(() => '?').join(',')})`); params.push(...opts.ids); }
   const firstAttempt = opts.board === 'today' && opts.mode === 'daily';
   const sql = boardSql(def.order, firstAttempt).replace('%WHERE%', where.join(' AND '));
@@ -387,27 +449,32 @@ async function friendIds(env: Env, meId: string): Promise<string[]> {
   return [meId, ...(res.results || []).map((r) => r.id)].slice(0, 300);
 }
 
+/** Your rank on a board, and the player just above you with the gap. */
+function placeIn(rows: any[], meId: string) {
+  const i = rows.findIndex((r: any) => r.player_id === meId);
+  if (i < 0) return { rank: null as number | null, next: null as any };
+  const above = i > 0 ? rows[i - 1] : null;
+  return { rank: i + 1, next: above ? { name: above.handle, score: above.score, gap: Math.round(Math.abs(above.score - rows[i].score) * 100) / 100 } : null };
+}
+
 async function top(req: Request, env: Env, url: URL, slug: string, body: string) {
   const g = stageOrThrow(slug);
-  const board = ['today', 'all', 'friends'].includes(url.searchParams.get('board') || '') ? url.searchParams.get('board')! : 'today';
-  const mode = url.searchParams.get('mode') || ((g.modes || []).includes('daily') ? 'daily' : 'solo');
+  const asked = url.searchParams.get('board') || 'week';
+  const board = ['week', 'all', 'today', 'friends'].includes(asked) ? asked : 'week';
+  const mode = url.searchParams.get('mode') || 'solo';
   const variant = url.searchParams.get('variant') === 'native' ? 'native' : 'classic';
   const assist = url.searchParams.get('assist') === '1' ? 1 : 0;
   const me = await optionalAuth(req, env, body);
   if (board === 'friends' && !me) throw new HttpError(401, 'auth_required');
   const ids = board === 'friends' && me ? await friendIds(env, me.id) : undefined;
-  const { rows } = await boardRows(env, g, { board, mode, variant, assist, ids, day: nairobiDay() });
+  const { rows } = await boardRows(env, g, { board, mode, variant, assist, ids, day: nairobiDay(), week: weekKey(), meId: me ? me.id : undefined });
   const out = rows.map((r: any, i: number) => ({ rank: i + 1, name: r.handle, score: r.score, tiebreak: r.tiebreak, me: me ? r.player_id === me.id : false }));
+  const place = me ? placeIn(rows, me.id) : { rank: null, next: null };
   const mine = me ? out.find((r: any) => r.me) || null : null;
-  return json({ game: g.id, board, mode, variant, assist, day: nairobiDay(), rows: out.slice(0, 50), me: mine },
-    200, { 'Cache-Control': board === 'friends' || me ? 'no-store' : 'public, max-age=30' });
-}
-
-async function todayRank(env: Env, g: Stage, run: any, def: any, meId: string, day: string): Promise<number | null> {
-  const mode = run.mode === 'daily' ? 'daily' : 'solo';
-  const { rows } = await boardRows(env, g, { board: 'today', mode, variant: run.variant, assist: run.assist, day });
-  const i = rows.findIndex((r: any) => r.player_id === meId);
-  return i >= 0 ? i + 1 : null;
+  const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 10));
+  return json({ game: g.id, board, mode, variant, assist, day: nairobiDay(), week: weekKey(), order: scoreDef(g, mode).order,
+    rows: out.filter((r: any) => r.name).slice(0, limit), me: mine ? { ...mine, next: place.next } : null },
+    200, { 'Cache-Control': me ? 'no-store' : 'public, max-age=30' });
 }
 
 /* ======================= challenges ======================= */
@@ -463,10 +530,17 @@ async function createChallenge(req: Request, env: Env, me: Player, body: string)
   await env.DB.prepare(
     `INSERT INTO challenges (id, kind, game, variant, seed, payload, creator_id, creator_run_id, creator_score, creator_tiebreak, created_at, expires_at, target_id, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, kind, g.id, run.variant, run.seed, pl, me.id, run.id, creatorScore, creatorTiebreak, now, now + CHALLENGE_TTL, target, now).run();
+  ).bind(id, kind, g.id, run.variant, run.seed, pl, me.id, run.id, creatorScore, creatorTiebreak, now, kind === 'beat' ? NEVER : now + CHALLENGE_TTL, target, now).run();
   await award(env, me.id, 'challenge.sent', g.id, id, now);
   await settleLevel(env, me.id);
   return json({ id, url: `${origin(req, env)}/c/${id}` }, 201);
+}
+
+/** A challenge is hidden when an admin hid the challenger or their score: the link falls back to the plain game. */
+export async function challengeHidden(env: Env, c: any): Promise<boolean> {
+  const r = await env.DB.prepare("SELECT COALESCE(p.status, 'ok') AS status, COALESCE(r.hidden, 0) AS hidden, COALESCE(r.flagged, 0) AS flagged FROM players p LEFT JOIN runs r ON r.id = ? WHERE p.id = ?")
+    .bind(c.creator_run_id, c.creator_id).first<any>();
+  return !r || r.status === 'hidden' || r.hidden === 1 || r.flagged === 1;
 }
 
 async function publicChallenge(req: Request, env: Env, c: any, me: Player | null) {
@@ -485,7 +559,7 @@ async function publicChallenge(req: Request, env: Env, c: any, me: Player | null
     payload: c.payload ? JSON.parse(c.payload) : null,
     creator: { id: c.creator_id, name: creator ? creator.handle : null },
     creatorScore: c.creator_score, creatorTiebreak: c.creator_tiebreak,
-    createdAt: c.created_at, expiresAt: c.expires_at, expired: c.expires_at < Date.now(),
+    createdAt: c.created_at, expiresAt: c.expires_at, expired: c.kind !== 'beat' && c.expires_at < Date.now(),
     entries: list.slice(0, 20), url: `${origin(req, env)}/c/${c.id}`,
     mine: me ? { played: !!mineEntry, score: mineEntry ? mineEntry.score : null, isCreator: me.id === c.creator_id } : null,
     continued: state && state.continued ? 1 : 0,
@@ -505,6 +579,7 @@ async function publicChallenge(req: Request, env: Env, c: any, me: Player | null
 async function getChallenge(req: Request, env: Env, id: string, body: string) {
   const c = await loadChallenge(env, id);
   if (!c) throw new HttpError(404, 'challenge_missing');
+  if (c.kind === 'beat' && (await challengeHidden(env, c))) return json({ id: c.id, game: c.game, hidden: true });
   const me = await optionalAuth(req, env, body);
   if (me && me.id !== c.creator_id) await env.DB.prepare('INSERT OR IGNORE INTO challenge_views (challenge_id, player_id, at) VALUES (?, ?, ?)').bind(c.id, me.id, Date.now()).run();
   return json(await publicChallenge(req, env, c, me));

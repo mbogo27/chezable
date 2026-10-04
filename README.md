@@ -3,7 +3,7 @@
 *Cheza: to play.* Short HTML5 games inside one shared shell, playable solo or head to head, and built to be shared. This repo is the MVP described in [`docs/build-spec.md`](docs/build-spec.md). It contains:
 
 - **The shell**: identity, runs, XP and coins, daily seeds, challenge links, sharing, standings, telemetry.
-- **Eight stages:** Apple Slicer, Cut It in Half, Hoop Shot, Nyanya Jetpack, Arrow Puzzle, Cap Drop, Lemon Squeeze and Water Bugs. Each has a Classic and a Native (Chezability) variant, except Water Bugs (the Kenyan game Shisima), which is native as built.
+- **Eight stages:** Apple Slicer, Cut It in Half, Hoop Shot, Nyanya Jetpack, Arrow Puzzle, Cap Drop, Lemon Squeeze and Water Bugs. Each has a Classic and a Native (Chezability) variant, except Water Bugs (the Kenyan game Shisima), which is native as built. Since spec v1 ([`docs/spec-v1-cleanup-and-core-loop.md`](docs/spec-v1-cleanup-and-core-loop.md)) only four are **featured** (Cut It in Half, Nyanya Jetpack, Cap Drop, Arrow Puzzle); the other four are archived: still in the repo, reachable by direct URL, not listed.
 - **One Cloudflare Worker** that serves the static site and the `/api`, backed by D1 (SQLite).
 
 Everything runs locally. Locally the database is a plain SQLite file under `apps/worker/.wrangler/state/`, and nothing touches Cloudflare until you deploy.
@@ -25,15 +25,57 @@ Open http://127.0.0.1:8787. To play as a second player (for challenges), open a 
 | `npm run dev:web` | Vite dev server for the shell pages (proxies `/api` to a running `wrangler dev`) |
 | `npm test` | unit tests: RNG, rules, level generators and solvers, Nyanya replay determinism, Water Bugs rules |
 | `npm run smoke` | end-to-end API test against the running Worker: identity, runs, caps, challenges, send-back, Nyanya Rescue, Water Bugs by link, standings, recovery |
-| `npm run browser` | headless Chrome plays every stage to its result sheet and loads every shell page; screenshots go to `tests/screens/` |
+| `npm run browser` | headless Chrome plays every stage to its end screen, walks a challenge from A to B and back, forces each end-screen state at 360 px, and loads every shell page; screenshots go to `tests/screens/` |
 | `npm run a11y` | axe-core (WCAG 2.2 AA) on every page and stage, light and dark |
 | `npm run budget` | performance budgets from spec §9.5 |
 | `npm run check` | all of the above (needs `npm run dev` running in another terminal) |
-| `npm run assets` | regenerates app icons and the Open Graph images |
+| `npm run assets` | regenerates app icons, the Open Graph images, and the challenge preview-card data (`apps/worker/src/og-data.generated.json`) |
 | `npm run readmes` | regenerates each game's README (charter checklist and pre-registration) from its `stage.json` |
 | `npm run logo` / `npm run fonts` | re-trace the logo PNG into SVG / re-download the subset fonts |
 
 To reset local data, stop the Worker and delete `apps/worker/.wrangler/state/`.
+
+Local secrets go in `apps/worker/.dev.vars` (git-ignored):
+
+```
+PEPPER=local-dev-pepper-change-me
+PUBLIC_ORIGIN=http://127.0.0.1:8787
+ADMIN_TOKEN=local-admin-token
+```
+
+`PUBLIC_ORIGIN` is needed locally because `wrangler dev` rewrites the request host to the route (chezable.com). The smoke test's admin checks run when `ADMIN_TOKEN` is set in its environment too.
+
+## Spec v1: cleanup and the core loop
+
+`play → end screen → challenge link on WhatsApp → friend plays → friend claims a name → challenges back → weekly board`. Where it lives:
+
+| Spec | Where |
+|---|---|
+| A1 four featured games | `featured`/`archived` in each `stage.json`; `C.catalog.featured` |
+| A2 Home everywhere | game bar Home button (confirms mid-run), intro card, end screen, pass-the-phone results, menu |
+| A3 background | `--bg-base` and the radial shapes in `packages/ui/tokens.css`, `ui.css` |
+| A5, B7 events | `C.track()` → `/api/events` and GA4 (`gtag`), names as in B7 |
+| B1 names | format rules `packages/chez-sdk/src/names.js` (shared); moderation lists **server-only** in `apps/worker/src/moderation.js`; `claimName` in `apps/worker/src/index.ts` |
+| B2 sharing | `packages/chez-sdk/src/share.js`: WhatsApp, Facebook, Copy link only |
+| B2 preview cards | `GET /og/c/<id>.png`, drawn in the Worker by `apps/worker/src/og.ts` from data built by `scripts/og-cards.mjs` (about 10 ms CPU, edge-cached; fits the Free plan) |
+| B3 landing | intro card in `packages/chez-sdk/src/stage.js`: one Play button |
+| B4 end screens | `packages/chez-sdk/src/endscreen.js`, states 1–7; `?force_state=N` forces one for testing |
+| B5 boards | `GET /api/top/<game>?board=week|all|today|friends&limit=10`; weeks start Monday 00:00 EAT (`weekKey` in `rules.js`) |
+| B5 integrity | rate limits per player and IP; scores above the game's maximum are stored `flagged` and kept off boards |
+| Moderation | `POST /api/report`; `/admin` page and `/api/admin/*` behind the `ADMIN_TOKEN` secret |
+
+Data model (B6) mapping: `players` gained `name_normalized` (unique), `name_changed_at`, `name_changes`, `status`; spec `scores` are our `runs` (plus `week_key`, `flagged`, `hidden`); spec `sessions` are runs that have started but not finished; `reports` is new. See [`apps/worker/migrations/0002_core_loop.sql`](apps/worker/migrations/0002_core_loop.sql).
+
+Defaults taken for the open decisions (spec §9), all easy to change:
+
+- Template game: Nyanya Jetpack. The loop is shared code, so all four featured games got it at once (M6).
+- Backend: the existing Worker + D1; `/c/<id>` already server-renders its preview tags.
+- Third share option: Facebook.
+- Name changes: one free change, then one every 14 days.
+- Mild insults and animal nicknames: allowed but flagged for review (they show on boards until an admin acts).
+- Still open: success targets (§0), and who reviews the blocklist. The supplied `swahili_profanity_blocklist_and_moderation_strategy.md` was not in the repo, so `moderation.js` holds a starter list that needs that review.
+
+Old Swahili game URLs redirect (`apps/web/public/_redirects`): Kata Nusu, Toka and Kifuniko go to their English pages (301); archived or removed games go to the homepage (302).
 
 ## Layout
 
@@ -82,6 +124,8 @@ Live at **https://chezable.com** (and www), served by the `chezable` Worker on C
 
 - D1 database `chezable` (id in `apps/worker/wrangler.toml`, region EEUR). Migrations: `npm run db:remote`.
 - Secret `PEPPER` (hashes recovery codes) is set on the Worker. Never commit it; rotating it invalidates existing recovery codes.
+- Secret `ADMIN_TOKEN` opens `/admin`. Set it with `npx wrangler secret put ADMIN_TOKEN -c apps/worker/wrangler.toml`. Without it the admin API is off.
+- Runs on the Workers **Free** plan (10 ms CPU per request): the preview-card renderer is written to fit that, and falls back to the static game image if it cannot.
 - chezable.com and www.chezable.com reach the Worker through routes on the proxied DNS records (`routes` in `wrangler.toml`).
 - To ship a change: `npm run check` locally (with `npm run dev` running), then `npm run deploy`, then push to GitHub.
 - Domain renewal: chezable.com expires **2027-09-21** (registered at OwnRegistrar). Put it in the diary (launch checklist item 12).
@@ -105,4 +149,4 @@ Live at **https://chezable.com** (and www), served by the `chezable` Worker on C
 - **Real devices:** a mid-range Android over 4G, an iPhone, a tablet (launch item 1). The automated runs here use desktop Chrome at phone size.
 - **Pre-registration:** confirm and date [`docs/preregistration.md`](docs/preregistration.md) before the first public link.
 
-P1 hooks left in place (spec §14): server replay verification (`runs.input_hash`, `runs.verified`, the shared `rng` and pure sims), groups (`edges`), coin spending (ledger only), dynamic OG images, and ghosts for the other stages (input logs are already recorded).
+P1 hooks left in place (spec §14): server replay verification (`runs.input_hash`, `runs.verified`, the shared `rng` and pure sims), groups (`edges`), coin spending (ledger only), and ghosts for the other stages (input logs are already recorded).

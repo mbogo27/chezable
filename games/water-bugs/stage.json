@@ -1,7 +1,8 @@
 {
   "id": "water-bugs",
   "version": "1.0.0",
-  "order": 9,
+  "order": 14,
+  "archived": true,
   "title": {
     "en": "Water Bugs"
   },

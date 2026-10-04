@@ -35,7 +35,7 @@ for (const s of slugs) stages.push(JSON.parse(await readFile(r('games', s, 'stag
 stages.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
 const shellCatalog = {
-  games: stages.map((s) => pick(s, ['id', 'version', 'order', 'title', 'rule', 'howto', 'modes', 'score', 'duration', 'seeded', 'variants', 'assist', 'turnBased', 'card', 'share', 'passCustom'])),
+  games: stages.map((s) => pick(s, ['id', 'version', 'order', 'featured', 'archived', 'title', 'rule', 'howto', 'modes', 'score', 'duration', 'seeded', 'variants', 'assist', 'turnBased', 'card', 'share', 'passCustom'])),
 };
 const workerCatalog = {
   games: stages.map((s) => pick(s, ['id', 'title', 'rule', 'modes', 'score', 'duration', 'variants', 'assist', 'turnBased'])),

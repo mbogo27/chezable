@@ -3,6 +3,7 @@ export interface Env {
   ASSETS: Fetcher;
   PEPPER?: string;
   PUBLIC_ORIGIN?: string;
+  ADMIN_TOKEN?: string;
 }
 
 export interface Player {

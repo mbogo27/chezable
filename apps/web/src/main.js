@@ -3,11 +3,12 @@
 import './style.css';
 import logo from '../../../brand/logo-paths.json';
 import { renderStatic } from './static.js';
+import { pageAdmin, afterAdmin } from './admin.js';
 
 const C = window.Chez;
 const { t, L } = C;
 const { esc, toast, relAge } = C.ui;
-const { games, formatScore, HOME_DAILIES, game: gameOf } = C.catalog;
+const { featured: games, formatScore, HOME_DAILIES, game: gameOf } = C.catalog;
 const { levelFor, xpForLevel, nairobiDay, NATIVE_UNLOCK_LEVEL } = C.rules;
 const app = document.getElementById('app');
 
@@ -81,7 +82,8 @@ function pageHome() {
   const dailies = HOME_DAILIES.map(gameOf).filter(Boolean);
   const next = games.find((g) => !played(g.id));
   return frame('home', `
-    <section class="hero"><p class="tagline">${esc(t('app_tagline'))}</p></section>
+    <section class="hero"><p class="tagline">${esc(t('app_tagline'))}</p>
+      ${!C.player().name && C.store.get('claim_prompts', 0) >= 3 ? `<a class="chip blue" href="/me#name" style="margin-top:8px;text-decoration:none">${esc(t('claim_name'))}</a>` : ''}</section>
     <section aria-labelledby="todayH">
       <div class="section-head"><h2 id="todayH">${esc(t('today'))}</h2><a href="/daily">${esc(t('daily_title'))} →</a></div>
       <div class="today-strip">
@@ -212,10 +214,11 @@ function pageMe() {
     <section class="card" id="name">
       <h2>${esc(p.name ? t('change_name') : t('claim_name'))}</h2>
       <p class="muted">${esc(t('claim_prompt'))}</p>
+      ${p.name && m.nextChangeAt ? `<p class="notice">${esc(t('name_next_change', { date: new Date(m.nextChangeAt).toLocaleDateString('en-KE', { day: 'numeric', month: 'long' }) }))}</p>` : p.name && m.freeChange ? `<p class="muted">${esc(t('name_free_change'))}</p>` : ''}
       <form data-name class="stack" novalidate>
         <div class="field"><label for="nm">${esc(t('name'))}</label>
-          <input id="nm" name="name" maxlength="16" autocomplete="nickname" autocapitalize="off" spellcheck="false" value="${esc(p.name || '')}" aria-describedby="nmHint nmErr" pattern="[A-Za-z0-9_]{3,16}">
-          <span class="hint" id="nmHint">${esc(t('name_hint'))}</span><span class="error" id="nmErr" role="alert"></span></div>
+          <input id="nm" name="name" maxlength="16" autocomplete="nickname" autocapitalize="off" spellcheck="false" value="${esc(p.name || '')}" aria-describedby="nmHint nmErr"><button type="button" class="btn alt small" data-suggest style="align-self:flex-start">${esc(t('es_suggest'))}</button>
+          <span class="hint" id="nmHint">${esc(t('name_hint'))} ${esc(t('es_device_note'))}</span><span class="error" id="nmErr" role="alert"></span></div>
         <button class="btn wide" type="submit">${esc(p.name ? t('change_name') : t('claim_name'))}</button>
       </form>
     </section>
@@ -244,24 +247,26 @@ function pageMe() {
 }
 function afterMe() {
   const f = document.querySelector('[data-name]');
+  f.querySelector('[data-suggest]').onclick = () => { f.name.value = C.names.suggestName(); f.name.focus(); };
   f.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = f.name.value.trim();
     const err = document.getElementById('nmErr');
-    const problem = C.rules.nameProblem(name);
-    if (problem) { err.textContent = t(problem); return; }
+    const problem = C.rules.nameFormatProblem(name);
+    if (problem) { err.textContent = t(problem === 'name_blocked' ? 'name_bad' : problem); C.track('name_rejected', { tier: problem === 'name_blocked' ? 'reserved' : 'format' }); return; }
     err.textContent = '';
     try {
       const res = await C.api('POST', '/player/name', { name });
       C.savePlayer({ name: res.handle });
-      C.track('name.claim', {});
+      C.track('name_claimed', {});
       if (res.recovery) { C.store.set('recovery', res.recovery); }
       toast(t('name_claimed'));
       await C.me().catch(() => {});
       render();
       if (res.recovery) setTimeout(() => { const b = document.querySelector('[data-show]'); if (b) b.click(); }, 50);
     } catch (e2) {
-      err.textContent = e2.offline ? t('offline') : t(e2.code === 'name_taken' ? 'name_taken' : e2.code === 'name_bad' ? 'name_bad' : e2.code === 'name_invalid' ? 'name_invalid' : 'error_generic');
+      err.textContent = e2.offline ? t('offline') : t(e2.code === 'name_taken' ? 'name_taken' : e2.code === 'name_blocked' ? 'name_bad' : e2.code === 'name_invalid' ? 'name_invalid' : e2.code === 'name_change_wait' ? 'name_wait' : 'error_generic');
+      C.track('name_rejected', { tier: e2.code || 'error' });
     }
   });
   const show = document.querySelector('[data-show]');
@@ -323,20 +328,21 @@ function pageTop(slug) {
     <p><a href="/g/${g.id}/">← ${esc(L(g.title))}</a></p>
     <h1 class="page-title">${esc(t('leaderboard'))}: ${esc(L(g.title))}</h1>
     <div class="seg" role="tablist" aria-label="${esc(t('leaderboard'))}" data-board>
-      <button role="tab" data-b="today">${esc(t('lb_today'))}</button><button role="tab" data-b="all">${esc(t('lb_all'))}</button><button role="tab" data-b="friends">${esc(t('lb_friends'))}</button>
+      <button role="tab" data-b="week">${esc(t('lb_week'))}</button><button role="tab" data-b="all">${esc(t('lb_all'))}</button>
     </div>
     <div class="hstack filters">
-      ${(g.modes || []).includes('daily') ? `<div class="seg" data-modesel><button data-m="daily">${esc(t('mode_daily'))}</button><button data-m="solo">${esc(t('mode_solo'))}</button></div>` : ''}
+      ${(g.modes || []).includes('daily') ? `<div class="seg" data-modesel><button data-m="solo">${esc(t('mode_solo'))}</button><button data-m="daily">${esc(t('mode_daily'))}</button></div>` : ''}
       ${g.variants && g.variants.native ? `<div class="seg" data-varsel><button data-v="classic">${esc(t('variant_classic'))}</button><button data-v="native">${esc(L(g.variants.native.label))}</button></div>` : ''}
       ${g.assist ? `<label class="switch small"><span>${esc(t('lb_assist'))}</span><input type="checkbox" data-assist></label>` : ''}
     </div>
     <div class="rows big" data-rows role="tabpanel" aria-live="polite"><p class="muted">${esc(t('loading'))}</p></div>
+    <div data-mine></div>
     <a class="btn wide" href="/g/${g.id}/">${esc(t('play'))}</a>`);
 }
 function afterTop(slug) {
   const g = gameOf(slug);
   if (!g) return;
-  const st = { board: 'today', mode: (g.modes || []).includes('daily') ? 'daily' : 'solo', variant: 'classic', assist: 0 };
+  const st = { board: 'week', mode: 'solo', variant: 'classic', assist: 0 };
   const paint = () => {
     document.querySelectorAll('[data-b]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.b === st.board)));
     document.querySelectorAll('[data-m]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === st.mode)));
@@ -344,21 +350,42 @@ function afterTop(slug) {
     load();
   };
   async function load() {
-    const box = document.querySelector('[data-rows]');
-    box.innerHTML = `<p class="muted">${esc(t('loading'))}</p>`;
+    const box = document.querySelector('[data-rows]'), mine = document.querySelector('[data-mine]');
+    box.innerHTML = `<p class="muted">${esc(t('loading'))}</p>`; mine.innerHTML = '';
+    C.track('leaderboard_view', { game: slug, board: st.board });
     try {
-      const q = `/top/${slug}?board=${st.board}&mode=${st.mode}&variant=${st.variant}&assist=${st.assist}`;
-      const res = await C.api('GET', q, null, st.board === 'friends' ? {} : { auth: !!C.player().registered });
+      const q = `/top/${slug}?board=${st.board}&mode=${st.mode}&variant=${st.variant}&assist=${st.assist}&limit=10`;
+      const res = await C.api('GET', q, null, { auth: !!C.player().registered });
       const rows = res.rows || [];
+      const fmt = (v) => formatScore(slug, st.mode, v);
       box.innerHTML = rows.length
-        ? rows.map((r) => `<div class="row ${r.me ? 'me' : ''}"><span><b>#${r.rank}</b> ${esc(r.name || t('anon'))}${r.me ? ` <small>${esc(t('lb_you'))}</small>` : ''}</span><b>${esc(formatScore(slug, st.mode, r.score))}</b></div>`).join('')
-        : `<p class="muted">${esc(st.board === 'friends' ? t('lb_friends_empty') : t('lb_empty'))}</p>`;
+        ? rows.map((r) => `<div class="row ${r.me ? 'me' : ''}"><span><b>#${r.rank}</b> ${esc(r.name)}${r.me ? ` <small>${esc(t('lb_you'))}</small>` : ''}</span>
+            <span class="row-right"><b>${esc(fmt(r.score))}</b>${r.me ? '' : `<button class="report-btn" data-report="${esc(r.name)}" aria-label="${esc(t('report'))} ${esc(r.name)}">${esc(t('report'))}</button>`}</span></div>`).join('')
+        : `<p class="muted">${esc(t('lb_empty'))}</p>`;
+      // your row, even outside the top 10, with the gap to the next rank up
+      if (res.me) {
+        const gap = !res.me.next ? t('lb_top') : res.me.next.gap === 0 ? t('lb_tied', { name: res.me.next.name || t('anon') }) : t('lb_gap', { gap: fmt(res.me.next.gap).replace(/ off$/, ''), name: res.me.next.name || t('anon') });
+        mine.innerHTML = `<div class="row me"><span><b>#${res.me.rank}</b> ${esc(res.me.name || t('you'))} <small>${esc(gap)}</small></span><b>${esc(fmt(res.me.score))}</b></div>`
+          + (!C.player().name ? `<p class="muted">${esc(t('lb_unnamed'))} <a href="/me#name">${esc(t('claim_name'))}</a></p>` : '');
+      }
     } catch (e) { box.innerHTML = `<p class="muted">${esc(e.offline ? t('offline') : t('error_generic'))}</p>`; }
   }
   document.querySelector('[data-board]').addEventListener('click', (e) => { const b = e.target.closest('[data-b]'); if (b) { st.board = b.dataset.b; paint(); } });
   document.querySelector('[data-modesel]')?.addEventListener('click', (e) => { const b = e.target.closest('[data-m]'); if (b) { st.mode = b.dataset.m; paint(); } });
   document.querySelector('[data-varsel]')?.addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (b) { st.variant = b.dataset.v; paint(); } });
   document.querySelector('[data-assist]')?.addEventListener('change', (e) => { st.assist = e.target.checked ? 1 : 0; paint(); });
+  document.querySelector('[data-rows]').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-report]');
+    if (!b) return;
+    const name = b.dataset.report;
+    const sh = C.ui.sheet(`<h2 style="font-size:24px">${esc(t('report_title', { name }))}</h2><p class="muted">${esc(t('report_body'))}</p>
+      <div class="stack"><button class="btn wide" data-go>${esc(t('report'))}</button><button class="btn alt wide" data-x>${esc(t('cancel'))}</button></div>`, { label: t('report') });
+    sh.el.querySelector('[data-x]').onclick = () => sh.close();
+    sh.el.querySelector('[data-go]').onclick = async () => {
+      try { await C.api('POST', '/report', { name, reason: 'name' }); toast(t('report_sent')); } catch (err) { toast(err.offline ? t('offline') : t('error_generic')); }
+      sh.close();
+    };
+  });
   paint();
 }
 
@@ -386,6 +413,7 @@ function route() {
   if (p === '/daily') return [pageDaily, null, t('daily_title')];
   if (p === '/challenges') return [pageChallenges, afterChallenges, t('challenges')];
   if (p === '/me') return [pageMe, afterMe, t('profile')];
+  if (p === '/admin') return [() => frame('', pageAdmin()), afterAdmin, 'Admin'];
   if ((m = p.match(/^\/top\/([a-z0-9-]+)$/))) return [() => pageTop(m[1]), () => afterTop(m[1]), t('leaderboard')];
   if ((m = p.match(/^\/c\/([A-Za-z0-9]+)$/))) return [() => pageChallenge(m[1]), () => afterChallenge(m[1]), t('challenges')];
   if (['/about', '/privacy', '/terms'].includes(p)) return [() => frame('', renderStatic(p.slice(1)) + footer()), null, t(p.slice(1))];

@@ -4,6 +4,8 @@ import { L } from './i18n.js';
 import { scoreDef } from './rules.js';
 
 export const games = data.games;
+/** The games listed on the home page and in navigation (spec v1 §A1). Archived games stay playable by URL. */
+export const featured = games.filter((g) => g.featured).length ? games.filter((g) => g.featured) : games;
 export const bySlug = Object.fromEntries(games.map((g) => [g.id, g]));
 export const HOME_DAILIES = ['arrow-puzzle', 'cap-drop', 'nyanya-jetpack'];
 

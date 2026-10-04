@@ -1,7 +1,8 @@
 {
   "id": "nyanya-jetpack",
   "version": "1.0.0",
-  "order": 4,
+  "order": 2,
+  "featured": true,
   "title": {
     "en": "Nyanya Jetpack"
   },

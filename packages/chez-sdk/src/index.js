@@ -10,6 +10,7 @@ import { toast, announce, sheet, esc, h, relAge } from './ui.js';
 import { share } from './share.js';
 import * as catalog from './catalog.js';
 import * as rules from './rules.js';
+import * as names from './names.js';
 import { rng, xmur3, mulberry32, shuffle, freshSeed } from '../../rng/rng.js';
 import { stage, onPlay, onPause, onResume, onQuit, pause, resume, isPaused, run, manifest, currentRun, createChallenge, showMenu } from './stage.js';
 import { logoMarkSvg } from './logo.js';
@@ -29,6 +30,7 @@ const Chez = {
   store,
   catalog,
   rules,
+  names,
   // identity + api (shell pages)
   player: net.player,
   savePlayer: net.savePlayer,

@@ -1,7 +1,8 @@
 {
   "id": "lemon-squeeze",
   "version": "1.0.0",
-  "order": 7,
+  "order": 13,
+  "archived": true,
   "title": {
     "en": "Lemon Squeeze"
   },

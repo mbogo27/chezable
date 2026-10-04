@@ -78,12 +78,14 @@ for (const g of cat.games) {
     const auto = await page.evaluate(() => { if (typeof window.__chezAuto === 'function') { window.__chezAuto(); return true; } return false; });
     if (!auto) for (const k of P.keys) await page.keyboard.press(k);
     await new Promise((r) => setTimeout(r, P.every));
-    done = !!(await page.$('.sheet .result-score, .sheet .vs, .sheet h2'));
+    done = !!(await page.$('.endscreen'));
   }
-  const sheet = done ? await page.$eval('.sheet', (s) => s.innerText.replace(/\s+/g, ' ').slice(0, 120)) : '(no result sheet)';
+  const sheet = done ? await page.$eval('.endscreen', (s) => s.dataset.state + ' | ' + s.innerText.replace(/\s+/g, ' ').slice(0, 110)) : '(no result sheet)';
   await page.screenshot({ path: path.join(shots, `${g.id}-result.png`) });
-  const ok = done && !page.errors.length;
+  const homes = await page.evaluate(() => ({ bar: !!document.querySelector('.home-btn span'), end: !!document.querySelector('.endscreen [data-act=home]') }));
+  const ok = done && !page.errors.length && homes.bar && homes.end;
   if (!ok) failures++;
+  if (!homes.bar || !homes.end) log('  missing Home:', JSON.stringify(homes));
   log(`${ok ? '✓' : '✗'} ${g.id.padEnd(15)} ${((Date.now() - t0) / 1000).toFixed(1)}s  ${sheet}`);
   if (page.errors.length) log('  errors:', page.errors.slice(0, 5));
   await page.close();
@@ -92,7 +94,11 @@ for (const g of cat.games) {
 // --- Today's set: every daily link (?mode=daily) must start a run without the intro card, and finish
 if (!only.length || only.includes('daily')) {
   const ctxD = await browser.createBrowserContext();
-  for (const g of cat.games.filter((x) => (x.modes || []).includes('daily'))) {
+  // follow the links actually listed on Today's set (archived games aren't there)
+  const lister = await ctxD.newPage(); await lister.goto(`${BASE}/daily`, { waitUntil: 'networkidle0', timeout: 90000 });
+  const dailyIds = await lister.$$eval('a[href*="?mode=daily"]', (links) => links.map((a) => a.getAttribute('href').split('/')[2]));
+  await lister.close();
+  for (const g of dailyIds.map((id) => ({ id }))) {
     const page = await ctxD.newPage();
     await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
     page.setDefaultTimeout(90000); page.setDefaultNavigationTimeout(90000);
@@ -106,7 +112,7 @@ if (!only.length || only.includes('daily')) {
       const auto = await page.evaluate(() => { if (typeof window.__chezAuto === 'function') { window.__chezAuto(); return true; } return false; });
       if (!auto) await page.keyboard.press('Space');
       await new Promise((r) => setTimeout(r, 180));
-      done = !!(await page.$('.sheet .result-score, .sheet .vs, .sheet h2'));
+      done = !!(await page.$('.endscreen'));
     }
     const ok = done && !intro && !errs.length;
     if (!ok) failures++;
@@ -116,6 +122,29 @@ if (!only.length || only.includes('daily')) {
   await ctxD.close();
 }
 
+// --- end-screen states (spec v1 §B4): each state reachable with forced values, at 360 px with a long name
+if (!only.length || only.includes('states')) {
+  const ctxS = await browser.createBrowserContext();
+  const page = await ctxS.newPage();
+  await page.setViewport({ width: 360, height: 740, isMobile: true, hasTouch: true });
+  page.setDefaultTimeout(90000); page.setDefaultNavigationTimeout(90000);
+  const errs = []; page.on('pageerror', (e) => errs.push(e.message));
+  await page.goto(`${BASE}/`, { waitUntil: 'networkidle0' });
+  await page.evaluate(() => { const p = JSON.parse(localStorage.getItem('chez:v1:player') || '{}'); p.name = 'Wanjiru_Kamau_22'; localStorage.setItem('chez:v1:player', JSON.stringify(p)); });
+  for (let n = 1; n <= 7; n++) {
+    await page.goto(`${BASE}/g/cut-in-half/?force_state=${n}`, { waitUntil: 'networkidle0' });
+    await page.evaluate(() => { document.querySelector('[data-variant=classic]')?.click(); document.querySelector('[data-mode=solo]').click(); });
+    const t0 = Date.now();
+    while (Date.now() - t0 < 60000 && !(await page.$('.endscreen'))) { await page.keyboard.press('Space'); await new Promise((r) => setTimeout(r, 200)); }
+    const info = await page.evaluate(() => { const e = document.querySelector('.endscreen'); return e && { state: e.dataset.state, head: e.querySelector('.es-head').textContent, home: !!e.querySelector('[data-act=home]'), primary: !!e.querySelector('[data-act=primary]') || !!e.querySelector('[data-claim] [type=submit]'), overflow: document.documentElement.scrollWidth > innerWidth + 1 || e.scrollWidth > e.clientWidth + 1 }; });
+    const ok = info && info.state === String(n) && info.home && info.primary && !info.overflow;
+    if (!ok) failures++;
+    log(`${ok ? '✓' : '✗'} state ${n}: ${info ? info.head : '(none)'}${info && info.overflow ? ' (overflows at 360px)' : ''}`);
+  }
+  if (errs.length) { failures++; log('  errors:', errs); }
+  await ctxS.close();
+}
+
 // --- the core loop through the UI: A challenges, B (a brand-new player in a fresh profile) accepts
 async function playToSheet(page, timeout = 120000) {
   const end = Date.now() + timeout;
@@ -123,7 +152,7 @@ async function playToSheet(page, timeout = 120000) {
     const auto = await page.evaluate(() => { if (typeof window.__chezAuto === 'function') { window.__chezAuto(); return true; } return false; });
     if (!auto) await page.keyboard.press('Space');
     await new Promise((r) => setTimeout(r, 180));
-    if (await page.$('.sheet .result-score, .sheet .vs, .sheet h2')) return true;
+    if (await page.$('.endscreen')) return true;
   }
   return false;
 }
@@ -140,8 +169,16 @@ if (!only.length || only.includes('challenge')) {
   await A.goto(`${BASE}/g/${game}/`, { waitUntil: 'networkidle0' });
   await A.evaluate(() => { document.querySelector('[data-variant=classic]')?.click(); document.querySelector('[data-mode=solo]').click(); });
   let ok = await playToSheet(A);
-  await A.click('[data-a=challenge]');
+  // first game: the name prompt (state 1); skip it, then challenge from the default state
+  const st1 = await A.$eval('.endscreen', (e) => e.dataset.state);
+  log(`${st1 === '1' ? '✓' : '✗'} first game shows the name prompt (state ${st1})`); if (st1 !== '1') failures++;
+  await A.click('[data-skip]');
+  await A.waitForFunction(() => document.querySelector('.endscreen') && document.querySelector('.endscreen').dataset.state !== '1');
+  const challengeBtn = await A.evaluateHandle(() => [...document.querySelectorAll('.endscreen button')].find((b) => /challenge|share/i.test(b.textContent)));
+  await challengeBtn.click();
   await A.waitForSelector('a[data-via=whatsapp]');
+  const opts = await A.$$eval('[data-via]', (els) => els.map((e) => e.dataset.via).filter((v) => v !== 'close'));
+  log(`${opts.join(',') === 'whatsapp,facebook,copy' ? '✓' : '✗'} share options: ${opts.join(', ')}`); if (opts.join(',') !== 'whatsapp,facebook,copy') failures++;
   const wa = await A.$eval('a[data-via=whatsapp]', (a) => decodeURIComponent(a.href));
   const link = (wa.match(/https?:\/\/\S+\/c\/[A-Za-z0-9]+/) || [])[0];
   log(`${link ? '✓' : '✗'} A's challenge share sheet: WhatsApp first, text "${wa.replace(/^.*text=/, '').slice(0, 70)}…"`);
@@ -149,16 +186,19 @@ if (!only.length || only.includes('challenge')) {
   if (link) {
     await B.goto(link, { waitUntil: 'networkidle0' });
     await B.waitForSelector('[data-accept]');
+    const taps = await B.$$eval('.overlay.show button', (b) => b.length);
+    log(`${taps === 1 ? '✓' : '✗'} landing has one Play button (${taps} buttons)`); if (taps !== 1) failures++;
     const head = await B.$eval('#cTitle', (h) => h.textContent);
     log(`✓ B lands on ${new URL(B.url()).pathname}${new URL(B.url()).search}: "${head}"`);
     await B.click('[data-accept]');
     ok = await playToSheet(B);
-    const vs = ok && (await B.$('.sheet .vs')) ? await B.$eval('.sheet', (s) => s.innerText.replace(/\s+/g, ' ').slice(0, 90)) : null;
-    if (!vs) log('  B sheet:', ok, await B.evaluate(() => (document.querySelector('.sheet') || document.querySelector('.overlay.show') || {}).innerText));
+    const vs = ok && (await B.$('.endscreen .vs')) ? await B.$eval('.endscreen', (s) => `state ${s.dataset.state} | ` + s.innerText.replace(/\s+/g, ' ').slice(0, 90)) : null;
+    if (!vs) log('  B screen:', ok, await B.evaluate(() => (document.querySelector('.endscreen') || document.querySelector('.overlay.show') || {}).innerText));
     log(`${vs ? '✓' : '✗'} B's result shows the comparison: ${vs}`);
     if (!vs) failures++;
-    const sendBack = await B.$('[data-a=sendback]');
-    log(`${sendBack ? '✓' : '✗'} "Send it back" offered`);
+    const sendBack = await B.evaluate(() => [...document.querySelectorAll('.endscreen button')].some((b) => /back|rematch/i.test(b.textContent)));
+    const claimShown = !!(await B.$('.endscreen [data-claim]'));
+    log(`${sendBack ? '✓' : '✗'} "Challenge back" / "Rematch" offered${claimShown ? ', with the name prompt' : ''}`);
     if (!sendBack) failures++;
   }
   for (const p of [A, B]) if (p.errors.length) { failures++; log('  errors:', p.errors); }
@@ -179,7 +219,7 @@ if (!only.length || only.includes('challenge')) {
     const end = Date.now() + 60000;
     while (Date.now() < end && !(await P.$('.overlay.show .btn')) && !(await P.$('.sheet .rows'))) { await P.keyboard.press('Space'); await new Promise((r) => setTimeout(r, 200)); }
   }
-  const passTxt = (await P.$('.sheet .rows')) ? await P.$eval('.sheet', (s) => s.innerText.replace(/\s+/g, ' ').slice(0, 90)) : null;
+  const passTxt = (await P.$('.sheet .rows')) && (await P.$('.sheet [data-a=home]')) ? await P.$eval('.sheet', (s) => s.innerText.replace(/\s+/g, ' ').slice(0, 90)) : null;
   log(`${passTxt ? '✓' : '✗'} pass the phone: ${passTxt}`);
   if (!passTxt || P.errors.length) { failures++; if (P.errors.length) log('  errors:', P.errors); }
   await ctxP.close();

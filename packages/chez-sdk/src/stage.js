@@ -5,10 +5,11 @@ import { prefs } from './prefs.js';
 import { t, L, addStrings } from './i18n.js';
 import { api, track, enqueue, flush, cachedMe, refreshMe, applyEarnings, player, on as onNet, sha256Hex, uuid, emit } from './net.js';
 import { esc, h, toast, announce, sheet, anySheetOpen } from './ui.js';
-import { share } from './share.js';
+import { share, shareOptions } from './share.js';
+import { showEndScreen, closeEndScreen, endScreenOpen } from './endscreen.js';
 import { audio } from './audio.js';
 import { rng as makeRng, freshSeed } from '../../rng/rng.js';
-import { game as catalogGame, games as catalogGames, formatScore } from './catalog.js';
+import { game as catalogGame, featured as catalogGames, formatScore } from './catalog.js';
 import { scoreDef, isBetter, levelFor, NATIVE_UNLOCK_LEVEL, nairobiDay } from './rules.js';
 import { logoMarkSvg } from './logo.js';
 
@@ -125,7 +126,8 @@ export const run = {
     const r = await startRun(ctx || lastCtx || {});
     current = r;
     paused = false;
-    track('run.start', { mode: r.mode, variant: r.variant, assist: r.assist ? 1 : 0, local: r.local ? 1 : 0 }, M.id);
+    track('game_start', { game: M.id, mode: r.mode, from_link: r.challenge ? 1 : 0, variant: r.variant, assist: r.assist ? 1 : 0, local: r.local ? 1 : 0 }, M.id);
+    showBeatTarget(r);
     if (r.variant === 'native') store.set('native:' + M.id, 1);
     updateBar();
     return r;
@@ -160,7 +162,7 @@ function buildChrome() {
   rail = h('<aside class="chez-rail" aria-label="Standings and challenge"></aside>');
   main.appendChild(rail);
   bar = h(`<header class="chez-bar">
-      <a class="icon-btn" href="/" aria-label="${esc(t('home'))}" data-home>${logoMarkSvg}</a>
+      <a class="home-btn" href="/" data-home>${logoMarkSvg}<span>${esc(t('home'))}</span></a>
       <h1 class="title"></h1>
       <a class="coins" href="/me" aria-label="${esc(t('coins'))}"><img class="coin" src="/icons/coin.svg" alt="" width="20" height="20"><span data-coins>0</span></a>
       <button class="icon-btn" data-menu aria-label="${esc(t('menu'))}" aria-haspopup="dialog">${menuSvg}</button>
@@ -169,6 +171,7 @@ function buildChrome() {
   const skip = h(`<a class="skip" href="#stage">${esc(L(M.title))}</a>`);
   document.body.insertBefore(skip, bar);
   $('[data-menu]', bar).addEventListener('click', openMenu);
+  $('[data-home]', bar).addEventListener('click', (e) => { e.preventDefault(); goHome('gamebar'); });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !anySheetOpen() && !$('.overlay.show')) { e.preventDefault(); openMenu(); }
   });
@@ -228,11 +231,12 @@ async function boot() {
   const q = new URLSearchParams(location.search);
   const cid = q.get('c');
   if (cid) {
+    track('link_open', { code: cid, game: M.id }, M.id);
     try {
       challenge = await api('GET', '/challenge/' + encodeURIComponent(cid));
-      track('challenge.open', { kind: challenge.kind }, M.id);
+      if (challenge.hidden) { challenge = null; notice = t('c_hidden'); }
     } catch (e) {
-      toast(e.offline ? t('challenge_need_net') : t('c_missing'));
+      notice = e.offline ? t('challenge_need_net') : t('c_hidden');
       challenge = null;
     }
   }
@@ -246,6 +250,7 @@ async function boot() {
 
 /* ======================= intro card ======================= */
 let introEl = null;
+let notice = null; // one-off friendly message on the intro card (e.g. an unavailable challenge link)
 function closeIntro() { if (introEl) { introEl.remove(); introEl = null; } }
 
 function bestFor(mode, variant) {
@@ -274,9 +279,12 @@ function showIntro() {
       <p class="muted" data-best style="margin:0"></p>
       <details><summary style="cursor:pointer;font-weight:700;min-height:32px">${esc(t('how_to_play'))}</summary>${howtoHtml()}</details>
       <details><summary style="cursor:pointer;font-weight:700;min-height:32px">${esc(t('how_its_made'))}</summary><div data-made></div></details>
-      <a class="btn alt small" href="/top/${M.id}">${esc(t('leaderboard'))}</a>
+      <div class="intro-foot"><a class="es-link" href="/top/${M.id}">${esc(t('leaderboard'))}</a><a class="es-link" href="/" data-home-link>${esc(t('home'))}</a></div>
+      ${notice ? `<p class="notice">${esc(notice)}</p>` : ''}
     </div></div>`);
   document.body.appendChild(introEl);
+  $('[data-home-link]', introEl).addEventListener('click', (e) => { e.preventDefault(); goHome('intro'); });
+  notice = null;
 
   function paint() {
     introEl.querySelectorAll('[data-variant]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.variant === variant)));
@@ -360,42 +368,48 @@ function showChallengeIntro() {
     accept = t('play');
     mode = 'turn';
   } else {
-    title = mine ? t('c_yours') : t('c_title', { name });
-    body = mine ? '' : t('c_body', { name, score: scoreTxt, game: L(M.title) });
-    accept = c.mine && c.mine.played ? t('c_practice') : t('c_accept');
+    title = mine ? t('c_yours') : t('c_beat_title', { name, score: scoreTxt, game: L(M.title) });
+    body = mine ? '' : L(M.rule);
+    accept = c.mine && c.mine.played ? t('c_practice') : t('play');
     mode = 'h2h';
     if (c.mine && c.mine.played) body = t('c_already', { score: formatScore(M.id, 'h2h', c.mine.score) });
   }
+  const landing = c.kind === 'beat' && !mine;
   if (c.expired) { body = t('c_expired'); accept = null; }
   const entries = (c.entries || []).slice(0, 8);
   introEl = h(`<div class="overlay show" role="dialog" aria-modal="true" aria-labelledby="cTitle"><div class="card">
       <div class="title-plank"><span class="outline">${esc(L(M.title))}</span></div>
-      <h2 id="cTitle" style="font-size:26px">${esc(title)}</h2>
-      ${body ? `<p style="font-size:17px;font-weight:600">${esc(body)}</p>` : ''}
+      <h2 id="cTitle" style="font-size:26px">${landing ? esc(title).replace(esc(name), `<b class="hl">${esc(name)}</b>`).replace(esc(scoreTxt), `<b class="hl">${esc(scoreTxt)}</b>`) : esc(title)}</h2>
+      ${body && !landing ? `<p style="font-size:17px;font-weight:600">${esc(body)}</p>` : ''}
       ${c.variant === 'native' && nativeDef() ? `<p class="chip tape" style="align-self:flex-start">${esc(L(nativeDef().label))}</p>` : ''}
       <div class="stack">
-        ${accept && !(mine && c.kind === 'beat') ? `<button class="btn wide" data-accept>${esc(accept)}</button>` : ''}
+        ${accept && !(mine && c.kind === 'beat') ? `<button class="btn wide big-play" data-accept>${esc(accept)}</button>` : ''}
+        ${landing && body ? `<p class="howto-line">${esc(body)}</p>` : ''}
         ${mine && c.kind !== 'turn' ? `<button class="btn alt wide" data-reshare>${esc(t('share'))}</button>` : ''}
-        <button class="btn alt wide" data-solo>${esc(t('play'))} · ${esc(t('mode_solo'))}</button>
+        ${landing ? '' : `<button class="btn alt wide" data-solo>${esc(t('play'))} · ${esc(t('mode_solo'))}</button>`}
       </div>
-      ${entries.length && c.kind === 'beat' ? `<h3 style="font-size:18px">${esc(t('c_board'))}</h3><div class="rows">${entries.map((e) => `<div class="row ${e.id === me.id ? 'me' : ''}"><span>${esc(e.name || t('anon'))}</span><b>${esc(formatScore(M.id, 'h2h', e.score))}</b></div>`).join('')}</div>` : ''}
+      <div class="intro-foot"><a class="es-link" href="/" data-home-link>${esc(t('home'))}</a></div>
+      ${!landing && entries.length && c.kind === 'beat' ? `<h3 style="font-size:18px">${esc(t('c_board'))}</h3><div class="rows">${entries.map((e) => `<div class="row ${e.id === me.id ? 'me' : ''}"><span>${esc(e.name || t('anon'))}</span><b>${esc(formatScore(M.id, 'h2h', e.score))}</b></div>`).join('')}</div>` : ''}
     </div></div>`);
   document.body.appendChild(introEl);
   const a = $('[data-accept]', introEl);
   if (a) a.addEventListener('click', () => {
     audio.ensure();
-    if (mode === 'h2h' && !(c.mine && c.mine.played)) track('challenge.accept', {}, M.id);
+    if (mode === 'h2h' && !(c.mine && c.mine.played)) track('challenge_accept', { code: c.id, game: M.id }, M.id);
     play({ mode, variant: c.variant, challenge: c });
   });
   const rs = $('[data-reshare]', introEl);
-  if (rs) rs.addEventListener('click', () => share({ text: t('challenge_text', { result: scoreTxt, game: L(M.title) }), url: c.url, game: M.id, kind: 'challenge' }));
-  $('[data-solo]', introEl).addEventListener('click', () => { challenge = null; history.replaceState(null, '', location.pathname); showIntro(); });
-  (a || $('[data-solo]', introEl)).focus({ preventScroll: true });
+  if (rs) rs.addEventListener('click', () => shareOptions({ text: `I scored ${scoreTxt} in ${L(M.title)} on Chezable. Beat me: ${c.url}`, url: c.url, game: M.id }));
+  const solo = $('[data-solo]', introEl);
+  if (solo) solo.addEventListener('click', () => { challenge = null; history.replaceState(null, '', location.pathname); showIntro(); });
+  $('[data-home-link]', introEl).addEventListener('click', (e) => { e.preventDefault(); goHome('intro'); });
+  (a || solo || $('[data-home-link]', introEl)).focus({ preventScroll: true });
 }
 
 /* ======================= play ======================= */
 function play(ctx) {
   closeIntro();
+  closeEndScreen();
   lastCtx = ctx;
   if (!playFn) { console.error('Stage has no onPlay handler'); return; }
   Promise.resolve(playFn({ ...ctx, assist: !!(prefs.assist && M.assist), skin, speed: prefs.assist && M.assist ? 0.7 : 1 })).catch((e) => {
@@ -479,7 +493,8 @@ function passResultSheet(rows, def, pm) {
   const s = sheet(`<h2 class="result-score" style="font-size:34px">${esc(head)}</h2>
     <div class="rows">${rows.map((r) => `<div class="row ${winner && r === winner ? 'win' : ''}"><span>${esc(r.name)}</span><b>${esc(formatScore(M.id, 'pass', r.score))}</b></div>`).join('')}</div>
     <div class="actions">
-      <button class="btn span" data-a="rematch">${esc(t('rematch'))}</button>
+      <button class="btn" data-a="rematch">${esc(t('rematch'))}</button>
+      <a class="btn alt" href="/" data-a="home">${esc(t('home'))}</a>
       <button class="btn alt" data-a="share">${esc(t('share'))}</button>
       <button class="btn alt" data-a="menu">${esc(t('back'))}</button>
     </div>`, { label: head, locked: true });
@@ -487,6 +502,7 @@ function passResultSheet(rows, def, pm) {
     const a = e.target.closest('[data-a]');
     if (!a) return;
     if (a.dataset.a === 'rematch') { s.close(); rematch(pm); }
+    if (a.dataset.a === 'home') { e.preventDefault(); s.close(); goHome('passphone'); }
     if (a.dataset.a === 'menu') { s.close(); showIntro(); }
     if (a.dataset.a === 'share') {
       const text = `${L(M.title)}: ${rows.map((r) => `${r.name} ${formatScore(M.id, 'pass', r.score)}`).join(' · ')}. ${head}.`;
@@ -546,6 +562,7 @@ async function onFinish(r, result) {
     announce(`${r.player ? r.player.name : ''}: ${formatScore(M.id, 'pass', result.score)}`);
     return res({ score: result.score, tiebreak: result.tiebreak, detail: result.detail });
   }
+  hideBeatTarget();
   const localPb = recordLocalBest(r, result);
   track('run.finish', { mode: r.mode, variant: r.variant, assist: r.assist ? 1 : 0, score: result.score, ms: durationMs }, M.id);
   let inputHash = null;
@@ -568,112 +585,29 @@ async function onFinish(r, result) {
   return res;
 }
 
-function earnChips(res) {
-  if (!res) return '';
-  const xp = (res.awards || []).reduce((a, w) => a + w.xp, 0);
-  const coins = (res.awards || []).reduce((a, w) => a + w.coins, 0);
-  const chips = [];
-  if (xp) chips.push(`<span class="chip blue">${esc(t('xp_earned', { xp }))}</span>`);
-  if (coins) chips.push(`<span class="chip tape"><img class="coin" src="/icons/coin.svg" alt="" width="16" height="16">${esc(t('coins_earned', { coins }))}</span>`);
-  if (res.levelUp) chips.push(`<span class="chip ok">${esc(t('level_up', { level: res.level }))}</span>`);
-  if (res.levelUp && res.level === NATIVE_UNLOCK_LEVEL) chips.push(`<span class="chip play">${esc(t('native_unlocked'))}</span>`);
-  return chips.length ? `<div class="earn">${chips.join('')}</div>` : '';
-}
-
-function nextStage() {
-  const played = store.get('played', {});
-  const idx = catalogGames.findIndex((g) => g.id === M.id);
-  const others = catalogGames.filter((g) => g.id !== M.id);
-  if (!others.length) return catalogGames[idx] || { id: M.id, title: M.title, rule: M.rule };
-  return others.find((g) => !played[g.id]) || catalogGames[(idx + 1) % catalogGames.length];
-}
-
 function showResult(r, result, res, { offline, localPb }) {
   track('result.view', { mode: r.mode, variant: r.variant }, M.id);
-  const fmt = (s) => formatScore(M.id, r.mode, s);
-  const scoreTxt = result.display || fmt(result.score);
-  const me = player();
-  const ch = res && res.challenge;
-  let headHtml = '';
-  if (ch && (r.mode === 'h2h')) {
-    const won = ch.result === 'win', lost = ch.result === 'loss';
-    const them = ch.creatorName || t('anon');
-    headHtml = `<h2 style="font-size:28px">${esc(won ? t('you_won') : lost ? t('you_lost') : t('tied'))}</h2>
-      <div class="vs">
-        <div class="side ${won ? 'won' : ''}"><span>${esc(me.name || t('you'))}</span><b>${esc(scoreTxt)}</b></div>
-        <div class="mid">vs</div>
-        <div class="side ${lost ? 'won' : ''}"><span>${esc(them)}</span><b>${esc(fmt(ch.creatorScore))}</b></div>
-      </div>
-      ${ch.counted === false ? `<p class="muted">${esc(t('practice_run'))}</p>` : ''}`;
-    track('challenge.complete', { result: ch.result, counted: ch.counted !== false ? 1 : 0 }, M.id);
-  } else {
-    const pb = res ? res.pb : localPb === true;
-    const best = res && res.best != null ? res.best : null;
-    headHtml = `<p class="result-score">${esc(scoreTxt)}</p>
-      ${result.sub ? `<p class="muted" style="font-size:17px">${esc(result.sub)}</p>` : ''}
-      <p class="muted">${pb ? `⭐ ${esc(t('result_pb'))}` : best != null ? esc(t('result_best', { best: fmt(best) })) : ''}${res && res.rank ? ` · ${esc(t('result_rank', { rank: res.rank }))}` : ''}</p>`;
-  }
-  const grid = result.share && result.share.grid ? `<p class="share-grid" aria-label="Result grid">${esc(result.share.grid)}</p>` : '';
-  const assistTag = r.assist ? `<span class="pill assist" style="align-self:flex-start">${esc(t('assist_run'))}</span>` : '';
-  const claim = !me.name && (r.mode === 'h2h' || (res && res.firstPlay)) ? `<p class="muted" style="margin:0">${esc(t('claim_prompt'))} <a href="/me#name">${esc(t('claim_name'))}</a></p>` : '';
-  const brandCta = skin && skin.cta ? `<a class="btn blue wide" href="${esc(skin.cta.url)}" target="_blank" rel="noopener">${esc(skin.cta.label)}</a>` : '';
-  const brandLogo = skin && skin.brand ? `<p class="muted" style="margin:0;text-align:center">${esc(skin.brand)}</p>` : '';
-  const ns = nextStage();
-  const canChallenge = (M.modes || []).includes('h2h') && r.mode !== 'revive' && r.mode !== 'okoa' && !(r.variant === 'native' && nativeDef() && nativeDef().noChallenge);
-  const isSendBack = r.ctx && r.ctx.sendBackTo;
-  const actions = [];
-  actions.push(`<button class="btn span" data-a="again">${esc(r.mode === 'h2h' ? t('c_practice') : (result.againLabel || t('play_again')))}</button>`);
-  if (r.mode === 'h2h' && ch) actions.push(`<button class="btn blue span" data-a="sendback">${esc(t('send_back'))}</button>`);
-  else if (isSendBack) actions.push(`<button class="btn blue span" data-a="challenge">${esc(t('send_back'))}: ${esc(r.ctx.sendBackName || '')}</button>`);
-  else if (canChallenge) actions.push(`<button class="btn blue span" data-a="challenge">${esc(t('challenge'))}</button>`);
-  for (const [i, x] of (result.actions || []).entries()) actions.push(`<button class="btn ${x.primary ? '' : 'alt'} span" data-x="${i}">${esc(x.label)}</button>`);
-  actions.push(`<button class="btn alt" data-a="share">${esc(t('share'))}</button>`);
-  actions.push(`<a class="btn alt" href="/g/${ns.id}/" data-a="next">${esc(t('next_stage'))}</a>`);
-  const s = sheet(`${assistTag}${headHtml}${grid}${earnChips(res)}
-      ${offline ? `<p class="muted">${esc(t('result_offline'))}</p>` : ''}
-      ${brandLogo}${brandCta}
-      <div class="actions">${actions.join('')}</div>${claim}
-      <p class="muted" style="margin:0;font-size:14px">${esc(t('next_stage'))}: <b>${esc(L(ns.title))}</b> · ${esc(L(ns.rule))}</p>`,
-    { label: scoreTxt, locked: true });
-  announce(`${L(M.title)}. ${scoreTxt}. ${res && res.pb ? t('result_pb') : ''}`);
-  s.el.addEventListener('click', async (e) => {
-    const x = e.target.closest('[data-x]');
-    if (x) { const act = result.actions[+x.dataset.x]; if (act.closes !== false) s.close(); act.run && act.run(); return; }
-    const a = e.target.closest('[data-a]');
-    if (!a) return;
-    const what = a.dataset.a;
-    if (what === 'next') return;
-    if (what === 'again') {
-      s.close();
+  const scoreTxt = result.display || formatScore(M.id, r.mode, result.score);
+  showEndScreen({
+    M, run: r, result, res, offline, localPb, scoreTxt, skin,
+    playAgain: () => {
       const ctx = { ...(r.ctx || lastCtx || {}) };
       if (ctx.mode === 'revive' || ctx.mode === 'okoa') { challenge = null; ctx.mode = 'solo'; ctx.challenge = null; }
+      if (ctx.mode === 'h2h') { challenge = null; ctx.mode = 'solo'; ctx.challenge = null; }
       if (result.againCtx) Object.assign(ctx, result.againCtx);
-      return play(ctx);
-    }
-    if (what === 'share') return shareResult(r, result, scoreTxt);
-    if (what === 'challenge') return createChallenge(r, result, scoreTxt, isSendBack ? { targetId: r.ctx.sendBackTo } : {});
-    if (what === 'sendback') {
-      s.close();
-      track('challenge.send_back', {}, M.id);
-      const c = r.challenge;
-      challenge = null;
-      return play({ mode: 'solo', variant: r.variant, sendBackTo: c.creator && c.creator.id, sendBackName: c.creator && c.creator.name });
-    }
+      play(ctx);
+    },
+    rematch: () => play({ mode: 'h2h', variant: r.variant, challenge: r.challenge }),
+    createChallenge: (opts = {}) => createChallenge(r, result, scoreTxt, { ...opts, noShare: true }),
+    goHome,
+    extraActions: result.actions || [],
   });
 }
 
 function shareLine(result, scoreTxt) {
   return (result.share && result.share.line) || scoreTxt;
 }
-function shareResult(r, result, scoreTxt) {
-  const url = `${location.origin}/g/${M.id}/`;
-  let text;
-  if (result.share && result.share.grid) text = `${result.share.head || `${L(M.title)} · ${scoreTxt}`}\n${result.share.grid}\n`;
-  else text = `${shareLine(result, scoreTxt)} · ${L(M.title)}.`;
-  return share({ text, url, game: M.id, kind: result.share && result.share.grid ? 'grid' : 'score' });
-}
-
-export async function createChallenge(r, result, scoreTxt, { kind = 'beat', targetId, payload } = {}) {
+export async function createChallenge(r, result, scoreTxt, { kind = 'beat', targetId, payload, noShare } = {}) {
   if (navigator.onLine === false) return toast(t('challenge_need_net'));
   if (r.local) {
     // an offline run has to reach the server before it can be challenged
@@ -696,11 +630,13 @@ export async function createChallenge(r, result, scoreTxt, { kind = 'beat', targ
     return;
   }
   track('challenge.create', { kind, variant: r.variant }, M.id);
+  // level games are challenged on their head-to-head score (e.g. bumps), not the level reached
+  if (noShare) return { ...c, scoreText: pl && typeof pl.h2hScore === 'number' ? formatScore(M.id, 'h2h', pl.h2hScore) : null };
   const line = pl && typeof pl.h2hScore === 'number' ? formatScore(M.id, 'h2h', pl.h2hScore) : shareLine(result, scoreTxt);
   const text = kind === 'revive'
     ? (result.reviveText || t('c_revive_title', { name: player().name || t('anon') }))
     : t('challenge_text', { result: line, game: L(M.title) });
-  await share({ text, url: c.url, game: M.id, kind: kind === 'revive' ? 'revive' : 'challenge' });
+  await shareOptions({ text: kind === 'revive' ? `${text} ${c.url}` : `${text} ${c.url}`, url: c.url, game: M.id });
   return c;
 }
 
@@ -719,7 +655,7 @@ function openMenu() {
       ${inRun ? `<button class="btn wide" data-m="resume">${esc(t('resume'))}</button>` : ''}
       <a class="btn alt wide" href="/top/${M.id}">${esc(t('leaderboard'))}</a>
       ${inRun ? `<button class="btn alt wide" data-m="quit">${esc(t('quit_run'))}</button>` : `<button class="btn alt wide" data-m="intro">${esc(t('back'))}</button>`}
-      <a class="btn alt wide" href="/">${esc(t('home'))}</a>
+      <a class="btn alt wide" href="/" data-m="home">${esc(t('home'))}</a>
     </div>`, { label: t('menu'), onClose: () => resume() });
   s.el.addEventListener('change', (e) => {
     const p = e.target.dataset.p;
@@ -732,8 +668,9 @@ function openMenu() {
     const b = e.target.closest('[data-m]');
     if (!b) return;
     if (b.dataset.m === 'resume') s.close();
-    if (b.dataset.m === 'quit') { if (current) current.done = true; current = null; paused = false; s.close(); emit('quit'); for (const fn of quitFns) fn(); showIntro(); }
+    if (b.dataset.m === 'quit') { hideBeatTarget(); if (current) current.done = true; current = null; paused = false; s.close(); emit('quit'); for (const fn of quitFns) fn(); showIntro(); }
     if (b.dataset.m === 'intro') { s.close(); challenge ? showChallengeIntro() : showIntro(); }
+    if (b.dataset.m === 'home') { e.preventDefault(); s.close(); goHome('gamebar'); }
   });
 }
 const quitFns = new Set();
@@ -743,8 +680,8 @@ export function showMenu() { showIntro(); }
 /* ======================= side rail ======================= */
 async function renderRail() {
   if (!rail || getComputedStyle(rail).display === 'none') return;
-  const mode = (M.modes || []).includes('daily') ? 'daily' : 'solo';
-  let html = `<div class="card"><h2>${esc(t('leaderboard'))} · ${esc(t('today'))}</h2><div class="rows" data-top><p class="muted">${esc(t('loading'))}</p></div>
+  const mode = 'solo';
+  let html = `<div class="card"><h2>${esc(t('leaderboard'))} · ${esc(t('lb_week'))}</h2><div class="rows" data-top><p class="muted">${esc(t('loading'))}</p></div>
     <a class="btn alt small" href="/top/${M.id}">${esc(t('leaderboard'))}</a></div>`;
   if (challenge && challenge.kind === 'beat') {
     html += `<div class="card"><h2>${esc(t('mode_h2h'))}</h2><p><b>${esc(challenge.creator && challenge.creator.name || t('anon'))}</b>: ${esc(formatScore(M.id, 'h2h', challenge.creatorScore))}</p></div>`;
@@ -753,7 +690,7 @@ async function renderRail() {
   }
   rail.innerHTML = html;
   try {
-    const top = await api('GET', `/top/${M.id}?board=today&mode=${mode}&variant=classic`, null, { auth: false });
+    const top = await api('GET', `/top/${M.id}?board=week&mode=${mode}&variant=classic&limit=5`, null, { auth: false });
     const rows = (top.rows || []).slice(0, 5);
     $('[data-top]', rail).innerHTML = rows.length
       ? rows.map((x) => `<div class="row"><span>#${x.rank} ${esc(x.name || t('anon'))}</span><b>${esc(formatScore(M.id, mode, x.score))}</b></div>`).join('')
@@ -763,3 +700,27 @@ async function renderRail() {
   }
 }
 addEventListener('resize', () => { if (rail && !rail.innerHTML) renderRail(); });
+
+/* ======================= Home + beat target (spec v1 §A2, §B3) ======================= */
+/** Home from anywhere. Mid-run it asks first (the existing "Leave this run" rule); otherwise it just goes. */
+export function goHome(from) {
+  const go = () => { track('home_tap', { from }, M.id); flushNow(); location.href = '/'; };
+  const inRun = current && !current.done && !endScreenOpen();
+  if (!inRun) return go();
+  pause();
+  const s = sheet(`<h2 style="font-size:24px">${esc(t('leave_title'))}</h2><p class="muted">${esc(t('leave_body'))}</p>
+    <div class="stack"><button class="btn wide" data-keep>${esc(t('keep_playing'))}</button><button class="btn alt wide" data-leave>${esc(t('leave_yes'))}</button></div>`,
+    { label: t('leave_title'), onClose: (v) => { if (v !== 'leave') resume(); } });
+  $('[data-keep]', s.el).onclick = () => s.close('keep');
+  $('[data-leave]', s.el).onclick = () => { s.close('leave'); go(); };
+}
+function flushNow() { try { track('nav', { to: 'home' }, M.id); } catch (e) {} }
+
+let beatEl = null;
+function showBeatTarget(r) {
+  hideBeatTarget();
+  if (r.mode !== 'h2h' || !r.challenge || r.challenge.creatorScore == null) return;
+  beatEl = h(`<div class="beat-pill" role="status">${esc(t('beat_target', { score: formatScore(M.id, 'h2h', r.challenge.creatorScore) }))}</div>`);
+  document.body.appendChild(beatEl);
+}
+function hideBeatTarget() { if (beatEl) { beatEl.remove(); beatEl = null; } }

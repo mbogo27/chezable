@@ -34,34 +34,15 @@ export function nairobiDayStart(day) {
   return Date.parse(day + 'T00:00:00Z') - 3 * 3600 * 1000;
 }
 
-/* ---------- names ---------- */
-export const NAME_RE = /^[A-Za-z0-9_]{3,16}$/;
+/** Weekly boards reset Monday 00:00 East Africa Time (UTC+3). Returns that Monday as YYYY-MM-DD. */
+export function weekKey(ts = Date.now()) {
+  const d = new Date(ts + 3 * 3600 * 1000);
+  const dow = (d.getUTCDay() + 6) % 7; // Monday = 0
+  return new Date(d.getTime() - dow * 86400000).toISOString().slice(0, 10);
+}
 
-// Blocklist for claimed names (English, Swahili, Sheng). Matched against a normalised form
-// (lower case, leetspeak folded, underscores and repeats removed) as substrings.
-const BLOCK = [
-  // English
-  'fuck', 'shit', 'cunt', 'bitch', 'whore', 'slut', 'dick', 'cock', 'pussy', 'penis', 'vagina', 'porn', 'sex', 'nigg', 'fag',
-  'rape', 'nazi', 'hitler', 'bastard', 'asshole', 'wank', 'twat', 'retard', 'kill', 'suicide',
-  // Swahili and Sheng
-  'malaya', 'kahaba', 'mavi', 'kuma', 'mboro', 'msenge', 'shoga', 'kumamake', 'kumanyoko', 'nyoko', 'matako', 'mkundu',
-  'fala', 'mjinga', 'pumbavu', 'ngono', 'kutomba', 'tomba', 'mshenzi', 'kunyonya', 'kisimi', 'mbwakoko',
-  // impersonation of staff
-  'admin', 'chezable', 'moderator', 'official',
-];
-export function normaliseName(name) {
-  return String(name).toLowerCase()
-    .replace(/[_\s]/g, '')
-    .replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5/g, 's').replace(/7/g, 't').replace(/8/g, 'b').replace(/9/g, 'g')
-    .replace(/(.)\1+/g, '$1');
-}
-export function nameProblem(name) {
-  if (!NAME_RE.test(name || '')) return 'name_invalid';
-  const n = normaliseName(name);
-  const squeezed = String(name).toLowerCase().replace(/[_\s]/g, '');
-  if (BLOCK.some((w) => n.includes(normaliseName(w)) || squeezed.includes(w))) return 'name_bad';
-  return null;
-}
+// Name rules live in names.js (format, shared) and the Worker's moderation.js (lists, server only).
+export { nameFormatProblem } from './names.js';
 
 /* ---------- scoring ---------- */
 /** Score definition for a mode, with per-mode overrides from stage.json. */

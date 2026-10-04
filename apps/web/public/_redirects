@@ -1,16 +1,28 @@
-# Old Swahili game URLs → English names (renamed 2026-10-04). Query strings (e.g. ?mode=daily) are kept.
-/g/kata-tufaha/* /g/apple-slicer/:splat 301
+# Old Swahili game URLs (renamed 2026-10-04). Query strings (e.g. ?mode=daily, ?c=...) are kept.
+# Renamed games that are still listed go to their English URL.
 /g/kata-nusu/* /g/cut-in-half/:splat 301
-/g/ruka-kapu/* /g/hoop-shot/:splat 301
 /g/toka/* /g/arrow-puzzle/:splat 301
 /g/kifuniko/* /g/cap-drop/:splat 301
-/g/kata-ndimu/* /g/lemon-squeeze/:splat 301
-/g/shisima/* /g/water-bugs/:splat 301
-/g/zamia/* / 302
-/top/kata-tufaha /top/apple-slicer 301
 /top/kata-nusu /top/cut-in-half 301
-/top/ruka-kapu /top/hoop-shot 301
 /top/toka /top/arrow-puzzle 301
 /top/kifuniko /top/cap-drop 301
-/top/kata-ndimu /top/lemon-squeeze 301
-/top/shisima /top/water-bugs 301
+# Games that are no longer listed (archived) and Zamia (removed) go to the homepage.
+/g/kata-tufaha/* / 302
+/g/ruka-kapu/* / 302
+/g/kata-ndimu/* / 302
+/g/shisima/* / 302
+/g/zamia/* / 302
+/top/kata-tufaha / 302
+/top/ruka-kapu / 302
+/top/kata-ndimu / 302
+/top/shisima / 302
+/top/zamia / 302
+# the same without a trailing slash
+/g/kata-nusu /g/cut-in-half/ 301
+/g/toka /g/arrow-puzzle/ 301
+/g/kifuniko /g/cap-drop/ 301
+/g/kata-tufaha / 302
+/g/ruka-kapu / 302
+/g/kata-ndimu / 302
+/g/shisima / 302
+/g/zamia / 302

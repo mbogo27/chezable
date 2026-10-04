@@ -89,7 +89,10 @@ const s = await A.ok('POST', '/run/start', { game, mode: 'solo', variant: 'class
 assert.equal((await A.call('POST', '/run/finish', { runId: s.runId, score: 5 })).status, 422); ok('too-fast runs rejected (T0 duration)');
 const s2 = await A.ok('POST', '/run/start', { game, mode: 'solo', variant: 'classic' });
 await sleep(2600);
-assert.equal((await A.call('POST', '/run/finish', { runId: s2.runId, score: 11 })).status, 422); ok('score bounds enforced (Apple Slicer ≤ 10)');
+const over = await A.ok('POST', '/run/finish', { runId: s2.runId, score: 11 });
+assert.equal(over.flagged, true); ok('implausible score stored but flagged (Apple Slicer ≤ 10)');
+const fab = await A.call('POST', '/run/finish', { runId: 'rFAKEFAKEFAKEFAKE', score: 5 });
+assert.equal(fab.status, 404); ok('a fabricated score without a valid run token is rejected');
 assert.equal((await B.call('POST', '/run/finish', { runId: r2.start.runId, score: 1 })).status, 404); ok('cannot finish someone else\'s run');
 // offline run synced later
 const off = await A.ok('POST', '/run/finish', { runId: 'L' + crypto.randomUUID(), score: 6, durationMs: 20000, local: { game, mode: 'solo', variant: 'classic', seed: 'offline-seed', startedAt: Date.now() - 60000 } });
@@ -101,7 +104,7 @@ assert.match(ch.url, /\/c\/[A-Za-z0-9]{8}$/); ok('challenge link ' + ch.url);
 const pub = await (await fetch(BASE + '/api/challenge/' + ch.id)).json();
 assert.equal(pub.creator.name, nameA); assert.equal(pub.creatorScore, 7); ok('public challenge info');
 const land = await (await fetch(BASE + '/c/' + ch.id)).text();
-assert.ok(land.includes(`${nameA} challenged you: 7 of 10 apples`)); ok('/c/ landing rewrites Open Graph tags for WhatsApp');
+assert.ok(land.includes(`${nameA} scored 7 of 10 apples. Can you beat it?`)); ok('/c/ landing rewrites Open Graph tags for WhatsApp');
 const bAccept = await B.ok('POST', '/run/start', { game, challengeId: ch.id });
 assert.equal(bAccept.seed, r2.start.seed); assert.equal(bAccept.mode, 'h2h'); ok('B plays the same seed in h2h');
 await sleep(2600);
@@ -124,8 +127,8 @@ const aLists = await A.ok('GET', '/challenges');
 assert.ok(aLists.waitingYou.find((c) => c.id === chBack.id)); ok('"Send it back" lands in A\'s waiting list');
 
 // --- leaderboards + friends
-const today = await (await fetch(`${BASE}/api/top/${game}?board=today&mode=solo`)).json();
-assert.ok(today.rows.length >= 2); assert.ok(today.rows[0].score >= today.rows[1].score); ok(`today board: ${today.rows.map((r) => `${r.name}:${r.score}`).join(', ')}`);
+const today = await (await fetch(`${BASE}/api/top/${game}?board=week&mode=solo`)).json();
+assert.ok(today.rows.length >= 2); assert.ok(today.rows[0].score >= today.rows[1].score); assert.ok(!today.rows.some((r) => r.score > 10), 'flagged score kept off the board'); ok(`weekly board: ${today.rows.map((r) => `${r.name}:${r.score}`).join(', ')}`);
 const friends = await A.ok('GET', `/top/${game}?board=friends&mode=solo`);
 assert.ok(friends.rows.length >= 2); ok('friends board built from the play graph');
 
@@ -150,6 +153,55 @@ ok('11 challenges created (XP cap checked server-side)');
 // --- telemetry
 const ev = await B.ok('POST', '/events', { events: [{ name: 'session.start', props: {}, ts: Date.now(), session: 'abc' }, { name: 'BAD NAME', ts: Date.now() }] });
 assert.equal(ev.n, 1); ok('telemetry batch accepted, bad names dropped');
+
+
+// --- spec v1: names, reports, weekly boards, previews, moderation
+const D = new Client('D'); await D.register();
+assert.equal((await D.call('POST', '/player/name', { name: 'k_u_m_a' })).data.error, 'name_blocked'); ok('moderated name rejected with the generic code');
+assert.equal((await D.call('POST', '/player/name', { name: '0722123456' })).data.error, 'name_invalid'); ok('phone-number-like name rejected');
+assert.equal((await D.call('POST', '/player/name', { name: nameA.toLowerCase().replace('a', '4') })).status, 409); ok('lookalike of an existing name is taken');
+const nm1 = `Dee_${uniq}`, nm2 = `Dee2_${uniq}`, nm3 = `Dee3_${uniq}`;
+await D.ok('POST', '/player/name', { name: nm1 });
+const ch1 = await D.ok('POST', '/player/name', { name: nm2 });
+assert.ok(ch1.nextChangeAt > Date.now()); ok('first change is free');
+const ch2 = await D.call('POST', '/player/name', { name: nm3 });
+assert.equal(ch2.status, 429); assert.equal(ch2.data.error, 'name_change_wait'); ok('next change waits 14 days');
+const flagged = new Client('F'); await flagged.register();
+await flagged.ok('POST', '/player/name', { name: `MbwaKali_${uniq.slice(0, 3)}` });
+ok('mild/animal nickname allowed (flagged for review)');
+await A2report();
+async function A2report() {
+  const r = await D.call('POST', '/report', { name: `MbwaKali_${uniq.slice(0, 3)}`, reason: 'name' });
+  assert.equal(r.status, 200); ok('report a name');
+}
+const dRun = await D.play(game, 6, { tiebreak: 20 });
+assert.ok(dRun.finish.rank >= 1); assert.equal(typeof dRun.finish.prevBest, 'object'); ok(`finish returns weekly rank #${dRun.finish.rank} and gap info`);
+const myRow = await D.ok('GET', `/top/${game}?board=week&mode=solo`);
+assert.ok(myRow.me && myRow.me.rank); ok(`your row: #${myRow.me.rank}${myRow.me.next ? `, ${myRow.me.next.gap} behind ${myRow.me.next.name}` : ''}`);
+const anon = new Client('U'); await anon.register();
+await anon.play(game, 10, { tiebreak: 1 });
+const wk = await (await fetch(`${BASE}/api/top/${game}?board=week&mode=solo`)).json();
+assert.ok(wk.rows.every((r) => r.name)); ok('unnamed players stay off public boards');
+const cutRun = await D.play('cut-in-half', 12.3, { tiebreak: 2.1 });
+const dc = await D.ok('POST', '/challenge', { runId: cutRun.start.runId });
+const card = await fetch(`${BASE}/og/c/${dc.id}.png`);
+const cardBuf = Buffer.from(await card.arrayBuffer());
+assert.equal(card.headers.get('content-type'), 'image/png'); assert.equal(cardBuf.subarray(1, 4).toString(), 'PNG'); assert.ok(card.url.includes('/og/c/')); ok(`preview card drawn for /c/${dc.id} (${(cardBuf.length / 1024).toFixed(0)} KB)`);
+const landHtml = await (await fetch(`${BASE}/c/${dc.id}`)).text();
+assert.ok(landHtml.includes(`/og/c/${dc.id}.png`)); assert.ok(landHtml.includes(`${nm2} scored 12.3 cm off. Can you beat it?`)); ok('/c/ HTML carries the challenge title and card image for WhatsApp');
+assert.ok(dc.id && (await D.ok('GET', `/challenge/${dc.id}`)).expired === false); ok('challenge links do not expire');
+if (process.env.ADMIN_TOKEN) {
+  const adm = (path, body) => fetch(BASE + '/api/admin' + path, { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + process.env.ADMIN_TOKEN }, body: body ? JSON.stringify(body) : undefined }).then((r) => r.json());
+  assert.equal((await fetch(BASE + '/api/admin/overview')).status, 401); ok('admin needs the token');
+  const ov = await adm('/overview');
+  assert.ok(ov.reports.length >= 1 && ov.flaggedNames.length >= 1 && ov.flaggedRuns.length >= 1); ok(`admin overview: ${ov.reports.length} reports, ${ov.flaggedNames.length} flagged names, ${ov.flaggedRuns.length} flagged scores`);
+  await adm('/player', { id: D.id, action: 'hide' });
+  const hid = await (await fetch(`${BASE}/api/challenge/${dc.id}`)).json();
+  assert.equal(hid.hidden, true); ok('hidden player: their challenge link falls back to the plain game');
+  const wk2 = await (await fetch(`${BASE}/api/top/cut-in-half?board=week&mode=solo`)).json();
+  assert.ok(!wk2.rows.some((r) => r.name === nm2)); ok('hidden player removed from boards');
+  await adm('/player', { id: D.id, action: 'unhide' });
+} else console.log('  (admin checks skipped: set ADMIN_TOKEN to run them)');
 
 // --- Nyanya Rescue rescue + Water Bugs turns (when those stages exist)
 if (cat.games.find((g) => g.id === 'nyanya-jetpack')) {

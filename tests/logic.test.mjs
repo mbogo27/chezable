@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { rng, xmur3 } from '../packages/rng/rng.js';
-import { levelFor, xpForLevel, nameProblem, nairobiDay, compareRuns, scoreDef, AWARDS } from '../packages/chez-sdk/src/rules.js';
+import { levelFor, xpForLevel, nairobiDay, weekKey, compareRuns, scoreDef, AWARDS } from '../packages/chez-sdk/src/rules.js';
 import * as toka from '../games/arrow-puzzle/logic.js';
 import * as kif from '../games/cap-drop/logic.js';
 import * as shis from '../games/water-bugs/logic.js';
@@ -35,13 +35,11 @@ test('awards: closed-loop table matches spec §4.3', () => {
   assert.equal(AWARDS['challenge.accepted_by_new_player'].coins, 20);
 });
 
-test('names: format and blocklist (English, Swahili, Sheng, leetspeak)', () => {
-  assert.equal(nameProblem('Wanjiru_22'), null);
-  assert.equal(nameProblem('ab'), 'name_invalid');
-  assert.equal(nameProblem('has space'), 'name_invalid');
-  assert.equal(nameProblem('Malaya99'), 'name_bad');
-  assert.equal(nameProblem('sh1t_happens'), 'name_bad');
-  assert.equal(nameProblem('Chezable_Admin'), 'name_bad');
+test('weekly boards reset Monday 00:00 East Africa Time', () => {
+  // Sunday 23:59 EAT = Sunday 20:59 UTC still belongs to the previous week; Monday 00:00 EAT starts a new one
+  assert.equal(weekKey(Date.parse('2026-10-04T20:59:00Z')), '2026-09-28');
+  assert.equal(weekKey(Date.parse('2026-10-04T21:00:00Z')), '2026-10-05');
+  assert.equal(weekKey(Date.parse('2026-10-08T12:00:00Z')), '2026-10-05');
 });
 
 test('Nairobi day rolls over at 21:00 UTC', () => {
