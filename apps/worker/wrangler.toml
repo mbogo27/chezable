@@ -4,8 +4,11 @@ name = "chezable"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
 workers_dev = true
-# Production: uncomment once chezable.com's DNS is on Cloudflare (spec §10.1).
-# routes = [{ pattern = "chezable.com", custom_domain = true }, { pattern = "www.chezable.com", custom_domain = true }]
+# chezable.com and www are proxied DNS records on the chezable.com zone; these routes send them to this Worker.
+routes = [
+  { pattern = "chezable.com/*", zone_name = "chezable.com" },
+  { pattern = "www.chezable.com/*", zone_name = "chezable.com" },
+]
 
 [assets]
 directory = "../web/dist"
@@ -16,8 +19,7 @@ run_worker_first = ["/api/*", "/c/*", "/b/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "chezable"
-# Replace with the id printed by `npx wrangler d1 create chezable` before the first remote deploy.
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "8de096af-0ab6-4c36-93db-8d0bcb36c2f3"
 migrations_dir = "migrations"
 
 [vars]

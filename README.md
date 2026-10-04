@@ -76,16 +76,15 @@ The shell then owns the result sheet, personal bests, XP and coins, sharing, cha
 
 Spec §10.3, plus `POST /api/player/recovery` (issue a new recovery code) and `POST /api/challenge/:id/move` (Shisima link play). Requests are signed with HMAC-SHA256 keyed by SHA-256 of a device secret, and the server stores only that hash. The schema is in [`apps/worker/migrations/0001_init.sql`](apps/worker/migrations/0001_init.sql): the spec's tables plus `tiebreak`/`day`/`local` on runs, turn-game columns on challenges, `challenge_views` (for "Waiting for you") and `rate_limits`.
 
-## Deploying to Cloudflare (when you're ready)
+## Deployment
 
-Nothing here has been deployed. When you are ready:
+Live at **https://chezable.com** (and www), served by the  Worker on Cloudflare, with a fallback at https://chezable.mbogo.workers.dev.
 
-1. `npx wrangler d1 create chezable`, then put the printed `database_id` into `apps/worker/wrangler.toml`.
-2. `npm run db:remote` applies the migrations to the remote database.
-3. `npx wrangler secret put PEPPER -c apps/worker/wrangler.toml` sets a long random string, used to hash recovery codes.
-4. `npm run deploy`. It first serves on `chezable.<account>.workers.dev`; check it there.
-5. Move chezable.com's DNS to Cloudflare, uncomment `routes` in `wrangler.toml`, and deploy again.
-6. Domain renewal: chezable.com expires **2027-09-21** (registered at OwnRegistrar). Put it in the diary (launch checklist item 12).
+- D1 database  (id in , region EEUR). Migrations: .
+- Secret  (hashes recovery codes) is set on the Worker. Never commit it; rotating it invalidates existing recovery codes.
+- chezable.com and www.chezable.com reach the Worker through routes on the proxied DNS records ( in ).
+- To ship a change:  locally, then , then push to GitHub.
+- Domain renewal: chezable.com expires **2027-09-21** (registered at OwnRegistrar). Put it in the diary (launch checklist item 12).
 
 ## Where this differs from the spec, and why
 
@@ -106,6 +105,5 @@ Nothing here has been deployed. When you are ready:
 - **Legal review:** of the privacy notice and terms (drafts in `apps/web/src/static.js`), coin rules, and whether ODPC registration is needed.
 - **Real devices:** a mid-range Android over 4G, an iPhone, a tablet (launch item 1). The automated runs here use desktop Chrome at phone size.
 - **Pre-registration:** confirm and date [`docs/preregistration.md`](docs/preregistration.md) before the first public link.
-- **Deploy:** the steps above.
 
 P1 hooks left in place (spec §14): server replay verification (`runs.input_hash`, `runs.verified`, the shared `rng` and pure sims), groups (`edges`), coin spending (ledger only), dynamic OG images, and ghosts for the other stages (input logs are already recorded).
