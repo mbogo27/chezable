@@ -1,0 +1,155 @@
+{
+  "id": "toka",
+  "version": "1.0.0",
+  "order": 5,
+  "title": {
+    "en": "Toka",
+    "sw": "Toka"
+  },
+  "rule": {
+    "en": "Tap arrows to slide them off the board, without letting one hit another.",
+    "sw": "Gusa mishale iteleze nje ya ubao, bila mmoja kugonga mwingine."
+  },
+  "howto": {
+    "en": [
+      "Tap an arrow and it slides out the way it points.",
+      "If something is in the way it bumps and you lose a heart. Clear every arrow to finish.",
+      "Keyboard: arrow keys move the yellow ring between arrows, Enter taps."
+    ],
+    "sw": [
+      "Gusa mshale nao utateleza kuelekea unakoelekeza.",
+      "Kitu kikiwa njiani unagonga na unapoteza moyo. Ondoa mishale yote kumaliza.",
+      "Kibodi: vitufe vya mishale vinasogeza pete ya njano kati ya mishale, Enter inagusa."
+    ]
+  },
+  "modes": [
+    "solo",
+    "daily",
+    "h2h"
+  ],
+  "score": {
+    "order": "desc",
+    "min": 0,
+    "max": 9999,
+    "template": {
+      "en": "Level {s}",
+      "sw": "Kiwango {s}"
+    },
+    "modes": {
+      "daily": {
+        "order": "asc",
+        "min": 0,
+        "max": 999,
+        "template": {
+          "en": "{s} bumps",
+          "sw": "migongano {s}"
+        },
+        "templateOne": {
+          "en": "1 bump",
+          "sw": "mgongano 1"
+        }
+      },
+      "h2h": {
+        "order": "asc",
+        "min": 0,
+        "max": 999,
+        "template": {
+          "en": "{s} bumps",
+          "sw": "migongano {s}"
+        },
+        "templateOne": {
+          "en": "1 bump",
+          "sw": "mgongano 1"
+        }
+      }
+    }
+  },
+  "tiebreak": {
+    "en": "time to clear",
+    "sw": "muda wa kumaliza"
+  },
+  "duration": {
+    "minMs": 1500,
+    "maxMs": 3600000
+  },
+  "seeded": true,
+  "assist": false,
+  "variants": {
+    "classic": {
+      "notation": "D01+D08 | V01 × U02 → S01+S08 → P03",
+      "chezability": 1
+    },
+    "native": {
+      "id": "giuthi",
+      "label": {
+        "en": "Giuthi arrows",
+        "sw": "Mishale ya Giuthi"
+      },
+      "desc": {
+        "en": "Double-headed arrows don't cost a heart when blocked: they reverse and leave by the tail. Blocked both ways, they stay put.",
+        "sw": "Mishale yenye vichwa viwili haipotezi moyo ikizuiwa: inageuka na kutoka kwa mkia. Ikizuiwa pande zote, inabaki ilipo."
+      },
+      "notation": "D08+D01 | V01 × U02+U06 ⊕ M61 → S08 → P02 [O08 on Giuthi]",
+      "chezability": 3,
+      "source": {
+        "en": "Giuthi, where sowing reverses direction when the last seed lands in an occupied pit",
+        "sw": "Giuthi, ambapo upandaji hugeuka mwelekeo mbegu ya mwisho ikiangukia shimo lenye mbegu"
+      }
+    }
+  },
+  "tunables": {
+    "hearts": 3,
+    "hints": 3
+  },
+  "share": {
+    "payload": "P02"
+  },
+  "card": {
+    "color": "#6B4A2B",
+    "icon": "➡️"
+  },
+  "strings": {
+    "en": {
+      "tk_level": "Level {n}",
+      "tk_left": "{n} arrows left",
+      "tk_hint": "Hint",
+      "tk_grid": "Grid",
+      "tk_restart": "Restart",
+      "tk_out": "Out of hearts",
+      "tk_out_body": "Level {n} starts again with fresh hearts. The layout stays the same.",
+      "tk_retry": "Try again",
+      "tk_bumps": "Bumps {n}",
+      "tk_bump": "Bump! {n} hearts left",
+      "tk_reverse": "Reversed out the tail",
+      "tk_stop": "Blocked both ways. No cost.",
+      "tk_out1": "Arrow out. {n} left",
+      "tk_flawless": "Flawless. Not a single bump.",
+      "tk_spare": "Cleared with {n} hearts to spare.",
+      "tk_next": "Play level {n}",
+      "tk_line": "I cleared the board with {b} bumps in {s} s",
+      "tk_line_lvl": "I reached level {n}",
+      "tk_secs": "{s} s"
+    },
+    "sw": {
+      "tk_level": "Kiwango {n}",
+      "tk_left": "Mishale {n} imebaki",
+      "tk_hint": "Kidokezo",
+      "tk_grid": "Gridi",
+      "tk_restart": "Anza upya",
+      "tk_out": "Mioyo imekwisha",
+      "tk_out_body": "Kiwango {n} kinaanza upya na mioyo mipya. Mpangilio unabaki ule ule.",
+      "tk_retry": "Jaribu tena",
+      "tk_bumps": "Migongano {n}",
+      "tk_bump": "Umegonga! Mioyo {n} imebaki",
+      "tk_reverse": "Umegeuka na kutoka kwa mkia",
+      "tk_stop": "Imezuiwa pande zote. Hakuna hasara.",
+      "tk_out1": "Mshale umetoka. {n} imebaki",
+      "tk_flawless": "Safi kabisa. Hakuna mgongano.",
+      "tk_spare": "Umemaliza ukiwa na mioyo {n}.",
+      "tk_next": "Cheza kiwango {n}",
+      "tk_line": "Nimemaliza ubao kwa migongano {b} ndani ya sek {s}",
+      "tk_line_lvl": "Nimefika kiwango {n}",
+      "tk_secs": "sek {s}"
+    }
+  }
+}

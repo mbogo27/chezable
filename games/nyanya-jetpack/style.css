@@ -1,0 +1,5 @@
+#play{touch-action:none;cursor:pointer;border-top:3px solid var(--line);border-bottom:3px solid var(--line);-webkit-touch-callout:none}
+#tier{color:#1B1D1E;transition:transform .2s}
+#tier.pop{transform:scale(1.18) rotate(-3deg)}
+.hint{position:absolute;left:50%;bottom:16%;transform:translateX(-50%);font-family:var(--font-display);font-size:24px;color:#fff;-webkit-text-stroke:3px #1b1d1e;paint-order:stroke fill;white-space:nowrap;pointer-events:none;animation:pulse 1.3s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.5}}

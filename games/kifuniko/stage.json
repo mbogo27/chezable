@@ -1,0 +1,146 @@
+{
+  "id": "kifuniko",
+  "version": "1.0.0",
+  "order": 6,
+  "title": {
+    "en": "Kifuniko",
+    "sw": "Kifuniko"
+  },
+  "rule": {
+    "en": "Slide the caps until the gold cap drops down the chute into the glass.",
+    "sw": "Teleza vifuniko hadi kifuniko cha dhahabu kidondoke kwenye glasi."
+  },
+  "howto": {
+    "en": [
+      "Tap a cap next to an empty space to slide it, or swipe it the way it should go.",
+      "Get the gold cap (with the star) to the bottom-right corner, over the chute.",
+      "Match the fewest possible moves for three stars. Keyboard: arrows to choose a cap, Enter to slide, Shift+arrow to push it."
+    ],
+    "sw": [
+      "Gusa kifuniko kilicho karibu na nafasi tupu ukiteleze, au kisukume upande unaotaka.",
+      "Fikisha kifuniko cha dhahabu (chenye nyota) kona ya chini kulia, juu ya mfereji.",
+      "Fikia idadi ndogo kabisa ya hatua upate nyota tatu. Kibodi: mishale kuchagua, Enter kuteleza, Shift+mshale kusukuma."
+    ]
+  },
+  "modes": [
+    "solo",
+    "daily",
+    "h2h"
+  ],
+  "score": {
+    "order": "desc",
+    "min": 0,
+    "max": 9999,
+    "template": {
+      "en": "Level {s}",
+      "sw": "Kiwango {s}"
+    },
+    "modes": {
+      "daily": {
+        "order": "asc",
+        "min": 1,
+        "max": 999,
+        "template": {
+          "en": "{s} moves",
+          "sw": "hatua {s}"
+        },
+        "templateOne": {
+          "en": "1 move",
+          "sw": "hatua 1"
+        }
+      },
+      "h2h": {
+        "order": "asc",
+        "min": 1,
+        "max": 999,
+        "template": {
+          "en": "{s} moves",
+          "sw": "hatua {s}"
+        },
+        "templateOne": {
+          "en": "1 move",
+          "sw": "hatua 1"
+        }
+      }
+    }
+  },
+  "tiebreak": {
+    "en": "time",
+    "sw": "muda"
+  },
+  "duration": {
+    "minMs": 800,
+    "maxMs": 3600000
+  },
+  "seeded": true,
+  "assist": false,
+  "variants": {
+    "classic": {
+      "notation": "D01 | V01/V06 × U02 → S01 → P03",
+      "chezability": 1
+    },
+    "native": {
+      "id": "maji",
+      "label": {
+        "en": "Maji ya Shisima",
+        "sw": "Maji ya Shisima"
+      },
+      "desc": {
+        "en": "On odd-sized boards the gold cap must pass through the centre, the water, before it may exit.",
+        "sw": "Kwenye bao za ukubwa wa witiri, kifuniko cha dhahabu lazima kipite katikati, majini, kabla ya kutoka."
+      },
+      "notation": "D01 | V01 × U02 ⊕ M32-style constraint → S08 → P02 [O11 on Shisima]",
+      "chezability": 3,
+      "source": {
+        "en": "Shisima, where a winning line must run through the centre: the water",
+        "sw": "Shisima, ambapo mstari wa ushindi lazima upite katikati: majini"
+      }
+    }
+  },
+  "tunables": {
+    "hints": 3
+  },
+  "share": {
+    "payload": "P02"
+  },
+  "card": {
+    "color": "#FFCC33",
+    "icon": "⭐"
+  },
+  "strings": {
+    "en": {
+      "kf_level": "Level {n}",
+      "kf_par": "Best possible: {n}",
+      "kf_moves": "{n} moves",
+      "kf_hint": "Hint",
+      "kf_restart": "Restart",
+      "kf_first": "Tap a cap next to an empty space to slide it.",
+      "kf_away": "You're {n} moves from the glass.",
+      "kf_nohint": "No hints left on this board.",
+      "kf_solved": "Solved in {m} moves. Best possible is {p}.",
+      "kf_next": "Play level {n}",
+      "kf_water": "Pass through the water first",
+      "kf_wet": "Through the water!",
+      "kf_line": "I solved it in {m} moves (best possible {p})",
+      "kf_line_lvl": "I reached level {n}",
+      "kf_slid": "Slid a cap. {n} moves."
+    },
+    "sw": {
+      "kf_level": "Kiwango {n}",
+      "kf_par": "Hatua chache zaidi: {n}",
+      "kf_moves": "hatua {n}",
+      "kf_hint": "Kidokezo",
+      "kf_restart": "Anza upya",
+      "kf_first": "Gusa kifuniko kilicho karibu na nafasi tupu ukiteleze.",
+      "kf_away": "Umebaki hatua {n} kufika glasini.",
+      "kf_nohint": "Vidokezo vimeisha kwenye ubao huu.",
+      "kf_solved": "Umemaliza kwa hatua {m}. Chache zaidi ni {p}.",
+      "kf_next": "Cheza kiwango {n}",
+      "kf_water": "Pita majini kwanza",
+      "kf_wet": "Umepita majini!",
+      "kf_line": "Nimemaliza kwa hatua {m} (chache zaidi {p})",
+      "kf_line_lvl": "Nimefika kiwango {n}",
+      "kf_slid": "Umeteleza kifuniko. Hatua {n}."
+    }
+  }
+}

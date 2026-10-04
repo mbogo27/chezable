@@ -1,0 +1,133 @@
+{
+  "id": "nyanya-jetpack",
+  "version": "1.0.0",
+  "order": 4,
+  "title": {
+    "en": "Nyanya Jetpack",
+    "sw": "Nyanya Jetpack"
+  },
+  "rule": {
+    "en": "Hold to fire the jetpack and keep the tomato off the spikes.",
+    "sw": "Shikilia kuwasha jetpack na uiepushe nyanya na miiba."
+  },
+  "howto": {
+    "en": [
+      "Hold anywhere, or hold Space, to fire the jetpack. Let go to drop.",
+      "Stay between the spikes and dodge the mines.",
+      "Bronze, Silver, Gold and up to Legend. In a challenge you race your friend's ghost."
+    ],
+    "sw": [
+      "Shikilia popote, au shikilia Space, kuwasha jetpack. Achia kushuka.",
+      "Baki kati ya miiba na ukwepe mabomu.",
+      "Shaba, Fedha, Dhahabu hadi Gwiji. Kwenye changamoto unashindana na kivuli cha rafiki yako."
+    ]
+  },
+  "modes": [
+    "solo",
+    "daily",
+    "h2h"
+  ],
+  "score": {
+    "order": "desc",
+    "min": 0,
+    "max": 20000,
+    "decimals": 1,
+    "template": {
+      "en": "{s} m",
+      "sw": "m {s}"
+    }
+  },
+  "duration": {
+    "minMs": 2000,
+    "maxMs": 1800000
+  },
+  "seeded": true,
+  "assist": true,
+  "variants": {
+    "classic": {
+      "notation": "D01+D05 | V03 × U01 ⊕ M82+M88 → S03+S04 → P04",
+      "chezability": 1
+    },
+    "native": {
+      "id": "okoa",
+      "label": {
+        "en": "Okoa",
+        "sw": "Okoa"
+      },
+      "desc": {
+        "en": "Crash, and you can send a rescue link. A friend who catches your falling tomato within 10 seconds brings you back, and you carry on from the crash.",
+        "sw": "Ukianguka, unaweza kutuma kiungo cha uokoaji. Rafiki akidaka nyanya yako ndani ya sekunde 10 anakurudisha, na unaendelea ulipoanguka."
+      },
+      "revive": true,
+      "notation": "D13+D07 | V03 × U01+U12 ⊕ M82+M95 → S13 → P05 [O10 on kati]",
+      "chezability": 4,
+      "source": {
+        "en": "kati, where catching the ball brings an eliminated player back",
+        "sw": "kati, ambapo kudaka mpira humrudisha mchezaji aliyetolewa"
+      }
+    }
+  },
+  "tunables": {
+    "gravity": 2.3,
+    "thrust": 4.9,
+    "vmax": 1.15,
+    "radius": 0.042,
+    "gapStart": 0.66,
+    "gapMin": 0.34,
+    "mineFrom": 290,
+    "okoaSecs": 10
+  },
+  "share": {
+    "payload": "P04"
+  },
+  "card": {
+    "color": "#E5322A",
+    "icon": "🍅"
+  },
+  "strings": {
+    "en": {
+      "ny_hold": "Hold to fly",
+      "ny_keep": "Hold to keep flying",
+      "ny_tier": "Made it to {tier}",
+      "ny_next": "{tier} starts at {m} m",
+      "ny_line": "I made it to {tier} with {n} m",
+      "ny_okoa": "Ask a friend to rescue you",
+      "ny_okoa_text": "I crashed at {n} m in Nyanya Jetpack. Catch my tomato in 10 seconds to bring me back:",
+      "ny_catch": "Catch the tomato!",
+      "ny_caught": "Caught! You rescued them.",
+      "ny_missed": "Missed. The tomato got away.",
+      "ny_ghost": "Ghost: {name}",
+      "ny_back": "Back in the air from {n} m",
+      "ny_secs": "{n} s",
+      "tier_Bronze": "Bronze",
+      "tier_Silver": "Silver",
+      "tier_Gold": "Gold",
+      "tier_Platinum": "Platinum",
+      "tier_Diamond": "Diamond",
+      "tier_Champion": "Champion",
+      "tier_Legend": "Legend"
+    },
+    "sw": {
+      "ny_hold": "Shikilia kuruka",
+      "ny_keep": "Shikilia kuendelea kuruka",
+      "ny_tier": "Umefika {tier}",
+      "ny_next": "{tier} inaanza m {m}",
+      "ny_line": "Nimefika {tier} kwa m {n}",
+      "ny_okoa": "Mwombe rafiki akuokoe",
+      "ny_okoa_text": "Nimeanguka m {n} kwenye Nyanya Jetpack. Daka nyanya yangu ndani ya sekunde 10 unirudishe:",
+      "ny_catch": "Daka nyanya!",
+      "ny_caught": "Umedaka! Umemwokoa.",
+      "ny_missed": "Umekosa. Nyanya imeponyoka.",
+      "ny_ghost": "Kivuli: {name}",
+      "ny_back": "Umerudi angani kutoka m {n}",
+      "ny_secs": "sek {n}",
+      "tier_Bronze": "Shaba",
+      "tier_Silver": "Fedha",
+      "tier_Gold": "Dhahabu",
+      "tier_Platinum": "Platinamu",
+      "tier_Diamond": "Almasi",
+      "tier_Champion": "Bingwa",
+      "tier_Legend": "Gwiji"
+    }
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "id": "kata-ndimu",
+  "version": "1.0.0",
+  "order": 7,
+  "title": {
+    "en": "Kata Ndimu",
+    "sw": "Kata Ndimu"
+  },
+  "rule": {
+    "en": "Swipe to cut the lemon and drain the pieces without flies into the glass.",
+    "sw": "Pangusa kukata ndimu na umimine vipande visivyo na nzi kwenye glasi."
+  },
+  "howto": {
+    "en": [
+      "Swipe all the way across the lemon to cut it.",
+      "The piece without flies drops and drains into the glass. Fill it to 100%.",
+      "Cut through a fly and it's over. Each lemon brings more flies and fewer cuts."
+    ],
+    "sw": [
+      "Pangusa kuvuka ndimu yote kuikata.",
+      "Kipande kisicho na nzi kinadondoka na kumiminika kwenye glasi. Ijaze hadi 100%.",
+      "Ukikata nzi, mchezo umekwisha. Kila ndimu ina nzi zaidi na mikato michache."
+    ]
+  },
+  "modes": [
+    "solo",
+    "h2h"
+  ],
+  "score": {
+    "order": "desc",
+    "min": 0,
+    "max": 500,
+    "template": {
+      "en": "{s} lemons juiced",
+      "sw": "ndimu {s} zimekamuliwa"
+    },
+    "templateOne": {
+      "en": "1 lemon juiced",
+      "sw": "ndimu 1 imekamuliwa"
+    }
+  },
+  "tiebreak": {
+    "en": "fewer total cuts",
+    "sw": "mikato michache zaidi"
+  },
+  "duration": {
+    "minMs": 1000,
+    "maxMs": 3600000
+  },
+  "seeded": true,
+  "assist": true,
+  "variants": {
+    "classic": {
+      "notation": "D05+D01 | V05/V08 × U01 → S01 → P01",
+      "chezability": 1
+    },
+    "native": {
+      "id": "panga-nzi",
+      "label": {
+        "en": "Panga Nzi",
+        "sw": "Panga Nzi"
+      },
+      "desc": {
+        "en": "When you send a challenge, you place the flies first. Your layout becomes your friend's board.",
+        "sw": "Unapotuma changamoto, unapanga nzi kwanza. Mpangilio wako unakuwa ubao wa rafiki yako."
+      },
+      "notation": "D01+D12 | V05+V06 × U01+U03 ⊕ M22 → S03 → P03 [O02+O07 on Kiothi]",
+      "chezability": 4,
+      "source": {
+        "en": "Kiothi, where a player may redistribute one pit's seeds anywhere on the board before play",
+        "sw": "Kiothi, ambapo mchezaji anaweza kugawa upya mbegu za shimo moja popote kabla ya mchezo"
+      }
+    }
+  },
+  "tunables": {
+    "capacity": 0.75,
+    "flyR": 0.13,
+    "maxFlies": 5
+  },
+  "share": {
+    "payload": "P03"
+  },
+  "card": {
+    "color": "#FFD21F",
+    "icon": "🍋"
+  },
+  "strings": {
+    "en": {
+      "kd_lemon": "Lemon {n}",
+      "kd_cuts": "Cuts left {n}",
+      "kd_swipe": "Swipe across the lemon",
+      "kd_across": "Swipe all the way across",
+      "kd_both": "Flies on both sides",
+      "kd_juiced": "Lemon juiced!",
+      "kd_fly": "You sliced a fly",
+      "kd_out": "Out of cuts",
+      "kd_line": "I juiced {n} lemons before the flies got me",
+      "kd_place": "Place your flies",
+      "kd_place_body": "Tap the lemon to place up to 5 flies. Your friend's first lemons start with your layout.",
+      "kd_place_done": "Send this board",
+      "kd_place_clear": "Clear",
+      "kd_placed": "{n} of 5 flies placed",
+      "kd_from": "Board set by {name}"
+    },
+    "sw": {
+      "kd_lemon": "Ndimu {n}",
+      "kd_cuts": "Mikato {n} imebaki",
+      "kd_swipe": "Pangusa kuvuka ndimu",
+      "kd_across": "Pangusa kuvuka yote",
+      "kd_both": "Nzi pande zote mbili",
+      "kd_juiced": "Ndimu imekamuliwa!",
+      "kd_fly": "Umekata nzi",
+      "kd_out": "Mikato imekwisha",
+      "kd_line": "Nimekamua ndimu {n} kabla nzi hawajanikamata",
+      "kd_place": "Panga nzi wako",
+      "kd_place_body": "Gusa ndimu kupanga hadi nzi 5. Ndimu za kwanza za rafiki yako zinaanza na mpangilio wako.",
+      "kd_place_done": "Tuma ubao huu",
+      "kd_place_clear": "Futa",
+      "kd_placed": "Nzi {n} kati ya 5 wamepangwa",
+      "kd_from": "Ubao umepangwa na {name}"
+    }
+  }
+}

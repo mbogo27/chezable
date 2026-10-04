@@ -1,0 +1,11 @@
+node_modules/
+apps/web/dist/
+apps/web/public/g/
+apps/web/public/shell/
+apps/web/public/sw.js
+.wrangler/
+apps/worker/.wrangler/
+.dev.vars
+*.log
+.DS_Store
+tests/screens/

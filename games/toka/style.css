@@ -1,0 +1,9 @@
+.board-wrap{margin:4px 10px;border:3px solid var(--line);border-radius:18px;background:#fbf6e6;overflow:hidden;box-shadow:0 6px 0 var(--line);touch-action:manipulation}
+#cv{cursor:pointer;outline:none}
+#cv:focus-visible{box-shadow:inset 0 0 0 3px var(--tape)}
+#hearts{font-size:22px;letter-spacing:2px;white-space:nowrap}
+#hearts .gone{opacity:.2;filter:grayscale(1)}
+#hearts.shake{animation:sh .3s}
+@keyframes sh{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.tools{display:flex;justify-content:center;gap:16px;padding:12px 14px 14px}
+#gridBtn[aria-pressed="true"]{background:var(--tape);color:#1B1D1E}

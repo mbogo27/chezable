@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zamia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light dark;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --board:#dfe4e2; --hole:rgba(40,58,64,.2); --ink:#1b1d1e; --muted:#566166;
+  --paper:#ffffff; --saw:#f26b1d; --tape:#ffd21f; --line:#1b1d1e; --veil:rgba(223,228,226,.6); --chip:#eef1f0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --board:#22323a; --hole:rgba(0,0,0,.38); --ink:#f2f0eb; --muted:#9db0b7; --paper:#18242a; --veil:rgba(20,30,35,.66); --chip:#22323a; }
+}
+:root[data-theme="dark"]{ --board:#22323a; --hole:rgba(0,0,0,.38); --ink:#f2f0eb; --muted:#9db0b7; --paper:#18242a; --veil:rgba(20,30,35,.66); --chip:#22323a; }
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;height:100%;overflow:hidden;color:var(--ink);
+  font-family:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:radial-gradient(circle,var(--hole) 2.2px,transparent 2.7px) 0 0/24px 24px,var(--board);
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#app{height:100%;display:flex;flex-direction:column;max-width:620px;margin:0 auto}
+.bar{display:flex;align-items:center;gap:12px;padding:10px 14px 8px}
+.brand{display:flex;flex-direction:column;line-height:1.05;flex:none}
+#title{font-family:"Archivo Black",Impact,sans-serif;font-size:24px}
+#diveLbl{font-size:14px;font-weight:600;color:var(--muted)}
+.air{flex:1;min-width:0}
+.airtop{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;font-weight:700}
+.airtop b{font-family:"Archivo Black",Impact,sans-serif;font-weight:400;font-size:18px}
+.meter{height:12px;border:2.5px solid var(--line);border-radius:999px;overflow:hidden;background:var(--paper);margin:2px 0}
+#airFill{display:block;height:100%;width:100%;background:#3fbf6a;transition:width .3s,background .3s}
+#papaSpd{font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.icon-btn{width:44px;height:44px;border-radius:50%;border:3px solid var(--line);background:var(--paper);color:var(--ink);font-size:18px;display:grid;place-items:center;cursor:pointer;box-shadow:0 3px 0 var(--line);flex:none}
+.icon-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--line)}
+
+#stage{position:relative;flex:1;min-height:200px;margin:0 10px;border:3px solid var(--line);border-radius:18px;overflow:hidden;background:#071827}
+#trench{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#trench::-webkit-scrollbar{display:none}
+#sea{position:relative;width:100%;background:linear-gradient(180deg,#7fd6e3 0,#2a93ad 90px,#145a7a 28%,#0b3550 60%,#061624 100%)}
+#rope{position:absolute;left:0;top:0;pointer-events:none}
+#event{position:absolute;left:10px;right:10px;top:10px;z-index:6;background:rgba(7,24,39,.82);color:#f2f0eb;border:2px solid rgba(255,255,255,.25);border-radius:12px;padding:7px 11px;font-size:14px;font-weight:600;line-height:1.3;pointer-events:none}
+#event b{color:var(--tape)}
+.boat{position:absolute;transform:translate(-50%,-50%);pointer-events:none}
+.tile{position:absolute;width:40px;height:40px;transform:translate(-50%,-50%);transition:opacity .3s}
+.shape{position:absolute;inset:0;background:#0b1a24;clip-path:var(--cp)}
+.shape::after{content:"";position:absolute;inset:4px;background:var(--c);clip-path:var(--cp)}
+.l1{--c:#ee7aa6;--cp:polygon(50% 4%,97% 93%,3% 93%)}
+.l2{--c:#7fb2e5;--cp:polygon(8% 8%,92% 8%,92% 92%,8% 92%)}
+.l3{--c:#c7d0d6;--cp:polygon(50% 3%,97% 38%,79% 95%,21% 95%,3% 38%)}
+.l4{--c:#ffcc33;--cp:polygon(25% 5%,75% 5%,98% 50%,75% 95%,25% 95%,2% 50%)}
+.stack .shape{background:#1b1d1e;clip-path:none;border-radius:10px}
+.stack .shape::after{background:#9a6a3a;clip-path:none;border-radius:7px}
+.val{position:absolute;inset:0;display:grid;place-items:center;font:700 13px "Barlow",sans-serif;color:#1b1d1e;z-index:1;padding-top:3px}
+.l1 .val{padding-top:12px}
+.stack .val{color:#fff;font-size:13px}
+.mimic .shape::after{background:repeating-linear-gradient(45deg,#7a2b2b 0 5px,#b8433a 5px 10px)}
+.mimic .val{color:#fff}
+.blank{width:14px;height:14px;border:2px dashed rgba(255,255,255,.35);border-radius:50%}
+.tok{position:absolute;width:36px;height:36px;border-radius:50%;border:3px solid #1b1d1e;display:grid;place-items:center;font:700 12px "Barlow",sans-serif;color:#1b1d1e;transform:translate(-50%,-50%);transition:left .2s ease,top .2s ease,opacity .3s;box-shadow:0 3px 0 #1b1d1e;z-index:3}
+.tok.turn{outline:3px solid var(--tape);outline-offset:2px}
+.tok.out{opacity:.35}
+#tokShark{width:42px;height:42px;background:#16303f;color:#fff;font-size:20px;z-index:4;border-color:#000}
+.tok .w{position:absolute;right:-8px;top:-8px;min-width:18px;height:18px;border-radius:9px;background:#1b1d1e;color:#fff;font-size:11px;display:grid;place-items:center;padding:0 4px}
+
+#panel{padding:10px 14px 12px;display:flex;flex-direction:column;gap:8px}
+#log{margin:0;min-height:44px;font-size:15px;line-height:1.35;font-weight:600;color:var(--muted)}
+#log b{display:block;color:var(--ink);font-size:16px;font-weight:700}
+#diceRow{display:flex;gap:8px;align-items:center;min-height:0}
+.die{width:34px;height:34px;border:3px solid var(--line);border-radius:9px;background:var(--paper);display:grid;place-items:center;font-family:"Archivo Black",Impact,sans-serif;font-size:18px;box-shadow:0 3px 0 var(--line)}
+#diceTxt{font-size:14px;font-weight:600;color:var(--muted)}
+#actions{display:flex;flex-wrap:wrap;gap:10px;min-height:52px;align-items:center}
+.btn{font:700 17px/1 "Barlow",system-ui,sans-serif;padding:14px 16px;border-radius:14px;border:3px solid var(--line);cursor:pointer;box-shadow:0 5px 0 var(--line);color:#1b1d1e;background:var(--saw);flex:1 1 auto;min-width:120px}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--line)}
+.btn.alt{background:var(--paper);color:var(--ink)}
+.btn.red{background:#e5544a;color:#fff}
+button:focus-visible{outline:3px solid var(--tape);outline-offset:3px}
+.wait{font-size:15px;font-weight:600;color:var(--muted)}
+#hold{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600}
+#chips{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.chip{display:flex;align-items:center;gap:5px;background:var(--chip);border:2px solid var(--line);border-radius:999px;padding:3px 9px 3px 4px;font-weight:700}
+.chip .mini{position:relative;width:18px;height:18px}
+.chip .mini .shape::after{inset:2.5px}
+#banked{white-space:nowrap;font-weight:700}
+
+.overlay{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 18px);background:var(--veil);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:10;overflow-y:auto}
+.overlay.show{display:flex}
+.card{width:100%;max-width:400px;background:var(--paper);border:3px solid var(--line);border-radius:22px;box-shadow:0 7px 0 var(--line);padding:20px 18px;display:flex;flex-direction:column;gap:11px;margin:auto 0}
+.card p{margin:0;font-size:16px;line-height:1.4}
+.card h2{margin:0;font-family:"Archivo Black",Impact,sans-serif;font-weight:400;font-size:30px;line-height:1.05}
+.muted{color:var(--muted);font-weight:600}
+.title-plank{position:relative;height:80px;border:3px solid var(--line);border-radius:8px;overflow:hidden;transform:rotate(-2deg);margin-bottom:4px;
+  background:
+    repeating-linear-gradient(90deg, rgba(40,20,5,.55) 0 2px, transparent 2px 10%) top left/100% 11px no-repeat,
+    repeating-linear-gradient(90deg, rgba(40,20,5,.28) 0 1px, transparent 1px 2%) top left/100% 6px no-repeat,
+    radial-gradient(ellipse 22px 9px at 22% 66%, rgba(110,55,15,.5), transparent 72%),
+    repeating-linear-gradient(177deg, transparent 0 6px, rgba(120,62,18,.16) 6px 7px, transparent 7px 13px),
+    linear-gradient(180deg,#eab978,#cf904d)}
+.outline{font-family:"Archivo Black",Impact,"Arial Black",sans-serif;color:#fff;-webkit-text-stroke:2.5px #1b1d1e;paint-order:stroke fill;white-space:nowrap}
+.title-plank .outline{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);font-size:36px;text-shadow:0 3px 0 rgba(0,0,0,.25)}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.leg{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600}
+.leg .tile{position:relative;transform:none;width:28px;height:28px;flex:none}
+.leg small{display:block;color:var(--muted);font-weight:600}
+.rows{display:flex;flex-direction:column;gap:6px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:16px;font-weight:600;padding:9px 12px;border-radius:12px;background:var(--chip)}
+.row.me{outline:3px solid var(--saw)}
+.row b{font-weight:700;white-space:nowrap}
+.row small{display:block;color:var(--muted);font-weight:600;font-size:13px}
+.stack-btns{display:flex;flex-direction:column;gap:11px;margin-top:4px}
+.stack-btns .btn{width:100%}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);transform:translate(-50%,20px);opacity:0;background:#1b1d1e;color:#fff;padding:12px 18px;border-radius:12px;font-weight:700;transition:.25s;z-index:20;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion: reduce){.tok{transition:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="bar">
+    <div class="brand"><span id="title">Zamia</span><span id="diveLbl">Daily trench</span></div>
+    <div class="air">
+      <div class="airtop"><span>Air in the tank</span><b id="airNum">25</b></div>
+      <div class="meter"><i id="airFill"></i></div>
+      <span id="papaSpd">Papa rises 1 per round</span>
+    </div>
+    <button class="icon-btn" id="mute" aria-label="Mute sound">🔊</button>
+  </header>
+  <section id="stage">
+    <div id="event"></div>
+    <div id="trench"><div id="sea"><svg id="rope"></svg></div></div>
+  </section>
+  <footer id="panel">
+    <p id="log" aria-live="polite"></p>
+    <div id="diceRow"></div>
+    <div id="actions"></div>
+    <div id="hold"><div id="chips"></div><span id="banked">Banked 0</span></div>
+  </footer>
+</div>
+
+<div class="overlay show" id="menu">
+  <div class="card">
+    <div class="title-plank"><span class="outline">Zamia</span></div>
+    <p>Dive the wreck off the coast with two rival divers, Baraka and Zawadi. You all breathe from one shared tank, and every treasure you carry drains it faster and slows you down.</p>
+    <p class="muted">Papa the shark rises from the deep each round, faster as the air runs low. If he reaches you, feed him a treasure to push him back or lose everything you carry. Deep tiles may be mimics. Three dives, and only treasure you bring back to the jahazi counts.</p>
+    <div class="legend" id="legend"></div>
+    <p class="muted" id="menuBest"></p>
+    <div class="stack-btns">
+      <button class="btn" id="dailyBtn">Dive today's trench</button>
+      <button class="btn alt" id="practiceBtn">Practice trench</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="sumO"><div class="card" id="sumCard"></div></div>
+<div id="toast"></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v);}catch(e){return null}}
+const NAMES={1:'beads',2:'porcelain',3:'silver',4:'gold'};
+const TITLE={1:'Beads',2:'Porcelain',3:'Silver',4:'Gold'};
+const RANGE={1:'0 to 3',2:'4 to 7',3:'8 to 11',4:'12 to 15'};
+const TIERS=[[0,'Bronze'],[15,'Silver'],[30,'Gold'],[45,'Platinum'],[60,'Legend']];
+const EVENTS=[
+  {id:'calm',name:'Calm water',desc:'Papa rises one space slower each round.'},
+  {id:'current',name:'Strong currents',desc:'Move 1 extra space diving down, 1 fewer swimming up.'},
+  {id:'bloom',name:'Bioluminescent bloom',desc:'Every tile shows its value, and mimics glow red.'},
+  {id:'collapse',name:'Trench collapse',desc:'Neighbouring tiles have been scrambled.'},
+  {id:'leak',name:'Leaky tank',desc:'The tank starts at 20 instead of 25.'},
+  {id:'frenzy',name:'Feeding frenzy',desc:'Papa rises one space faster, but feeding him pushes him back twice as far.'}
+];
+const RIVALS=[
+  {name:'Baraka',short:'B',color:'#33c2b0',cap:3,downMin:3,upMin:2,turnAt:6},
+  {name:'Zawadi',short:'Z',color:'#b58cf5',cap:2,downMin:2,upMin:1,turnAt:10}
+];
+
+/* ---------- seeded randomness ---------- */
+function xmur3(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return(h^=h>>>16)>>>0;};}
+function mulberry(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const rngFor=(seed,stream)=>mulberry(xmur3(seed+'|'+stream)());
+function shuffle(a,r){for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const now0=new Date(), pad=n=>String(n).padStart(2,'0');
+const DATE_KEY=`${now0.getFullYear()}-${pad(now0.getMonth()+1)}-${pad(now0.getDate())}`;
+const DATE_LABEL=now0.toLocaleDateString(undefined,{day:'numeric',month:'short'});
+
+/* ---------- audio ---------- */
+let ac=null,master=null,muted=store('zamia.muted')==='1';
+function ensureAudio(){ if(ac){if(ac.state==='suspended')ac.resume();return;} try{ac=new (window.AudioContext||window.webkitAudioContext)();master=ac.createGain();master.gain.value=muted?0:0.9;master.connect(ac.destination);}catch(e){ac=null;} }
+function tone(f0,f1,dur,type,vol,delay=0){ if(!ac)return; const t=ac.currentTime+delay,o=ac.createOscillator();o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur);const g=ac.createGain();g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+0.02); }
+function noise(dur,freq,vol){ if(!ac)return; const len=Math.floor(ac.sampleRate*dur),b=ac.createBuffer(1,len,ac.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,2);const s=ac.createBufferSource();s.buffer=b;const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=freq;const g=ac.createGain();g.gain.value=vol;s.connect(f);f.connect(g);g.connect(master);s.start(); }
+const sfx={
+  dice(){noise(0.12,2500,0.25);},
+  step(){tone(320,240,0.06,'sine',0.06);},
+  take(){tone(660,990,0.12,'triangle',0.14);},
+  bank(){[523,659,784].forEach((f,i)=>tone(f,f,0.18,'triangle',0.14,i*0.08));},
+  shark(){tone(110,70,0.4,'sawtooth',0.12);noise(0.3,500,0.3);},
+  bad(){tone(300,90,0.35,'square',0.08);}
+};
+const muteBtn=$('#mute');
+function paintMute(){muteBtn.textContent=muted?'🔇':'🔊';muteBtn.setAttribute('aria-label',muted?'Turn sound on':'Mute sound');}
+paintMute();
+muteBtn.onclick=()=>{ensureAudio();muted=!muted;store('zamia.muted',muted?'1':'0');if(master)master.gain.value=muted?0:0.9;paintMute();};
+
+/* ---------- flow control ---------- */
+let RUN=0, rejectCur=null;
+class Abort extends Error{}
+const sleep=(ms,id)=>new Promise((res,rej)=>setTimeout(()=>id!==RUN?rej(new Abort()):res(),reduce?Math.min(ms,120):ms));
+function choice(opts,id){
+  return new Promise((res,rej)=>{
+    const box=$('#actions'); box.innerHTML='';
+    opts.forEach(o=>{const b=document.createElement('button');b.className='btn'+(o.cls?' '+o.cls:'');b.textContent=o.label;
+      b.onclick=()=>{if(id!==RUN)return;ensureAudio();box.innerHTML='';rejectCur=null;res(o.key);};box.appendChild(b);});
+    rejectCur=()=>rej(new Abort());
+    const first=box.querySelector('button'); if(first) first.focus({preventScroll:true});
+  });
+}
+function waitFor(btn,id){return new Promise((res,rej)=>{btn.onclick=()=>{if(id!==RUN)return;ensureAudio();rejectCur=null;res();};rejectCur=()=>rej(new Abort());});}
+function waiting(text){$('#actions').innerHTML=`<span class="wait">${text}</span>`;}
+
+/* ---------- game state ---------- */
+let G=null;
+const value=it=>it.stack?it.stack.reduce((a,b)=>a+value(b),0):it.val;
+const itemName=it=>it.stack?`sunken pile (${it.stack.length})`:NAMES[it.lvl];
+const active=d=>!d.back&&!d.out;
+const allDone=()=>G.divers.every(d=>!active(d));
+const occupied=(i,me)=>G.divers.some(d=>d!==me&&active(d)&&d.pos===i);
+const showVals=()=>G.event.id==='bloom';
+
+function newGame(daily){
+  RUN++; const id=RUN; if(rejectCur){const r=rejectCur;rejectCur=null;r();}
+  $('#menu').classList.remove('show'); $('#sumO').classList.remove('show');
+  const seed=daily?'zamia-'+DATE_KEY:'practice-'+Math.random().toString(36).slice(2);
+  const er=rngFor(seed,'events');
+  G={daily,seed,dive:0,track:makeTrench(rngFor(seed,'layout')),events:shuffle(EVENTS.slice(),er).slice(0,3),
+     prng:rngFor(seed,'you'),sunk:[],logs:[],turnOf:null,
+     divers:[{name:'You',short:'You',color:'#f26b1d',isPlayer:true,banked:0}].concat(RIVALS.map((c,i)=>({name:c.name,short:c.short,color:c.color,cfg:c,rng:rngFor(seed,'rival'+i),banked:0})))};
+  run(id).catch(e=>{if(!(e instanceof Abort))console.error(e);});
+}
+function makeTrench(r){
+  const tiles=[];
+  for(let lvl=1;lvl<=4;lvl++){
+    const base=(lvl-1)*4; const arr=[];
+    for(let v=0;v<4;v++){arr.push({lvl,val:base+v,mimic:false});arr.push({lvl,val:base+v,mimic:false});}
+    shuffle(arr,r);
+    const mimics=lvl===3?1:lvl===4?2:0;
+    for(let k=0;k<mimics;k++){arr[k].mimic=true;arr[k].val=0;}
+    shuffle(arr,r); tiles.push(...arr);
+  }
+  return tiles.map(it=>({item:it}));
+}
+function setupDive(d){
+  G.dive=d; G.event=G.events[d];
+  if(d>0){
+    G.track=G.track.filter(t=>t.item);
+    for(let i=0;i<G.sunk.length;i+=3) G.track.push({item:{stack:G.sunk.slice(i,i+3),lvl:4}});
+    G.sunk=[];
+  }
+  if(G.event.id==='collapse'){const r=rngFor(G.seed,'collapse'+d);for(let i=0;i<G.track.length-1;i++){if(r()<0.4){[G.track[i],G.track[i+1]]=[G.track[i+1],G.track[i]];i++;}}}
+  G.maxO2=G.event.id==='leak'?20:25; G.oxygen=G.maxO2; G.airOut=false;
+  G.shark=G.track.length;
+  for(const v of G.divers){v.pos=-1;v.dir=1;v.turned=false;v.back=false;v.out=false;v.carried=[];v.gain=0;v.fate='';}
+  G.logs=[]; buildBoard(); renderAll();
+  $('#event').innerHTML=`<b>Dive ${d+1}: ${G.event.name}.</b> ${G.event.desc}`;
+  $('#trench').scrollTo({top:0});
+}
+
+/* ---------- board rendering ---------- */
+let BW=0;
+function xy(i){
+  if(i<0) return {x:BW/2,y:62};
+  if(i>=G.track.length) return {x:BW/2,y:126+G.track.length*54+6};
+  return {x:BW/2+Math.sin(i*0.62+0.4)*BW*0.27,y:126+i*54};
+}
+function shapeHTML(it,showVal){
+  if(it.stack) return `<div class="tile stack"><div class="shape"></div><div class="val">${showVal?value(it):'×'+it.stack.length}</div></div>`;
+  const mim=it.mimic&&showVal;
+  return `<div class="tile l${it.lvl}${mim?' mimic':''}"><div class="shape"></div><div class="val">${mim?'!':(showVal?it.val:'')}</div></div>`;
+}
+function buildBoard(){
+  const sea=$('#sea'); BW=$('#trench').clientWidth;
+  sea.querySelectorAll('.tile,.boat,.tok').forEach(e=>e.remove());
+  const H=126+(G.track.length+1)*54+60; sea.style.height=H+'px';
+  const rope=$('#rope'); rope.setAttribute('width',BW); rope.setAttribute('height',H);
+  const pts=[xy(-1)].concat(G.track.map((_,i)=>xy(i))).map(p=>`${p.x},${p.y}`).join(' ');
+  rope.innerHTML=`<polyline points="${pts}" fill="none" stroke="rgba(255,255,255,.32)" stroke-width="2" stroke-dasharray="3 6"/>`;
+  const b=document.createElement('div'); b.className='boat'; const bp=xy(-1);
+  b.style.left=bp.x+'px'; b.style.top=(bp.y-22)+'px';
+  b.innerHTML=`<svg width="150" height="70" viewBox="0 0 150 70" aria-hidden="true"><path d="M76 4 L76 46 L122 46 Z" fill="#f4efe2" stroke="#1b1d1e" stroke-width="3" stroke-linejoin="round"/><line x1="76" y1="2" x2="76" y2="48" stroke="#1b1d1e" stroke-width="3"/><path d="M6 44 H144 L128 62 H24 Z" fill="#9a5b2e" stroke="#1b1d1e" stroke-width="3" stroke-linejoin="round"/><path d="M14 52 H136" stroke="#c98a45" stroke-width="3"/></svg>`;
+  sea.appendChild(b);
+  G.track.forEach((t,i)=>{const el=document.createElement('div');el.className='slot';el.dataset.i=i;sea.appendChild(el);});
+  renderTiles();
+  for(const d of G.divers){const t=document.createElement('div');t.className='tok';t.style.background=d.color;t.textContent=d.short;d.el=t;sea.appendChild(t);}
+  const s=document.createElement('div'); s.className='tok'; s.id='tokShark'; s.textContent='🦈'; s.setAttribute('aria-label','Papa the shark'); sea.appendChild(s); G.sharkEl=s;
+}
+function renderTiles(){
+  const sea=$('#sea'); sea.querySelectorAll('.tile').forEach(e=>e.remove());
+  G.track.forEach((t,i)=>{
+    const p=xy(i); let el;
+    if(t.item){ const w=document.createElement('div'); w.innerHTML=shapeHTML(t.item,showVals()); el=w.firstChild; }
+    else { el=document.createElement('div'); el.className='tile'; el.innerHTML='<div class="blank" style="margin:13px"></div>'; }
+    el.style.left=p.x+'px'; el.style.top=p.y+'px'; sea.insertBefore(el,sea.querySelector('.tok'));
+  });
+}
+function renderTokens(){
+  const atBoat=G.divers.filter(d=>d.pos<0);
+  G.divers.forEach(d=>{
+    let p=xy(d.pos);
+    if(d.pos<0){const k=atBoat.indexOf(d);p={x:p.x+(k-(atBoat.length-1)/2)*40,y:p.y+4};}
+    d.el.style.left=p.x+'px'; d.el.style.top=p.y+'px';
+    d.el.classList.toggle('out',d.out); d.el.classList.toggle('turn',G.turnOf===d);
+    d.el.innerHTML=d.short+(d.carried.length&&active(d)?`<span class="w">${d.carried.length}</span>`:'');
+    d.el.setAttribute('aria-label',`${d.name}${d.turned?', heading up':''}, carrying ${d.carried.length}`);
+  });
+  const sp=xy(G.shark); const shared=G.divers.some(d=>active(d)&&d.pos===G.shark&&G.shark<G.track.length);
+  G.sharkEl.style.left=(sp.x+(shared?40:0))+'px'; G.sharkEl.style.top=sp.y+'px';
+}
+function sharkSpeed(){
+  const o=G.oxygen, base=o>12?1:o>6?2:3, e=G.event.id;
+  return Math.max(0,base+(e==='calm'?-1:e==='frenzy'?1:0));
+}
+function renderHud(){
+  $('#diveLbl').textContent=`${G.daily?'Daily':'Practice'}, dive ${G.dive+1} of 3`;
+  $('#airNum').textContent=G.oxygen;
+  const f=$('#airFill'); f.style.width=(G.oxygen/G.maxO2*100)+'%';
+  f.style.background=G.oxygen>12?'#3fbf6a':G.oxygen>6?'#f2b632':'#e5544a';
+  const s=sharkSpeed(); $('#papaSpd').textContent=s?`Papa rises ${s} per round`:'Papa is resting this round';
+  const me=G.divers[0];
+  $('#chips').innerHTML=me.carried.length?me.carried.map(it=>{
+    const cls=it.stack?'stack':'l'+it.lvl;
+    return `<span class="chip"><span class="mini tile ${cls}" style="position:relative;transform:none"><span class="shape"></span></span>${value(it)}</span>`;}).join('')
+    :`<span class="muted">Carrying nothing</span>`;
+  $('#banked').textContent=`Banked ${me.banked}`;
+}
+function renderAll(){renderTokens();renderHud();}
+function log(msg,strong){G.logs.unshift({msg,strong});G.logs=G.logs.slice(0,2);
+  $('#log').innerHTML=G.logs.map((l,i)=>i===0?`<b>${l.msg}</b>`:`<span>${l.msg}</span>`).join('');}
+function follow(i){const t=$('#trench');const y=xy(i).y;t.scrollTo({top:Math.max(0,y-t.clientHeight*0.45),behavior:reduce?'auto':'smooth'});}
+
+/* ---------- turns ---------- */
+async function rollDice(r,id,who){
+  const row=$('#diceRow'); sfx.dice();
+  const a=1+Math.floor(r()*3), b=1+Math.floor(r()*3);
+  if(!reduce) for(let k=0;k<5;k++){row.innerHTML=`<span class="die">${1+Math.floor(Math.random()*3)}</span><span class="die">${1+Math.floor(Math.random()*3)}</span>`;await sleep(60,id);}
+  row.innerHTML=`<span class="die">${a}</span><span class="die">${b}</span><span id="diceTxt">${who}</span>`;
+  return a+b;
+}
+function stepsFor(d,roll){
+  let s=Math.max(0,roll-d.carried.length);
+  if(G.event.id==='current') s=Math.max(0,s+(d.dir>0?1:-1));
+  return s;
+}
+async function move(d,steps,id){
+  for(let k=0;k<steps;k++){
+    let n=d.pos+d.dir;
+    while(n>=0&&n<G.track.length&&occupied(n,d)) n+=d.dir;
+    if(d.dir>0&&n>=G.track.length) break;
+    if(d.dir<0&&n<0){ d.pos=-1; renderTokens(); await sleep(200,id); return bank(d); }
+    d.pos=n; renderTokens(); sfx.step(); follow(d.pos); await sleep(200,id);
+  }
+}
+function bank(d){
+  d.back=true; const v=d.carried.reduce((a,it)=>a+value(it),0); d.banked+=v; d.gain=v; d.fate='safe';
+  log(d.isPlayer?`You made it back to the jahazi and banked ${v}.`:`${d.name} made it back and banked ${v}.`);
+  d.carried=[]; if(d.isPlayer) sfx.bank(); renderAll();
+}
+function noDeeper(d){for(let i=d.pos+1;i<G.track.length;i++) if(!occupied(i,d)) return false; return true;}
+
+async function playerTurn(d,id){
+  follow(d.pos<0?-1:d.pos);
+  let opts;
+  if(d.pos<0) opts=[{key:'down',label:'Dive in and roll'}];
+  else if(!d.turned&&noDeeper(d)) opts=[{key:'up',label:'Turn back and roll'}];
+  else if(!d.turned) opts=[{key:'down',label:'Keep diving'},{key:'up',label:'Turn back',cls:'alt'}];
+  else opts=[{key:'up',label:'Swim up and roll'}];
+  log(d.turned?'Your turn. Keep swimming for the jahazi.':'Your turn. Keep diving, or turn back for good?', true);
+  const c=await choice(opts,id);
+  if(c==='up'&&!d.turned){d.turned=true;d.dir=-1;}
+  const roll=await rollDice(G.prng,id,'');
+  const steps=stepsFor(d,roll);
+  $('#diceTxt').textContent=`${roll}${d.carried.length?` − ${d.carried.length} for weight`:''}${G.event.id==='current'?(d.dir>0?' + 1 current':' − 1 current'):''} = ${steps} ${steps===1?'space':'spaces'}`;
+  await move(d,steps,id);
+  if(d.back) return;
+  if(await catchCheck(d,id)) return;
+  const tile=G.track[d.pos];
+  if(tile.item){
+    const it=tile.item;
+    let label=`Take the ${itemName(it)}`;
+    if(showVals()) label+= it.mimic?' (mimic!)':` (${value(it)})`;
+    log(it.stack?'A pile of sunken treasure sits here.':`You landed on ${NAMES[it.lvl]}${it.lvl>=3&&!showVals()?'. Could be a mimic.':'.'}`,true);
+    const c2=await choice([{key:'take',label},{key:'leave',label:'Leave it',cls:'alt'}],id);
+    if(c2==='take') await take(d,tile,id);
+  } else if(d.carried.length){
+    log('Empty spot. You can drop a treasure here to lighten your load.',true);
+    const opts2=d.carried.map((it,i)=>({key:'d'+i,label:`Drop ${TITLE[it.lvl]&&!it.stack?TITLE[it.lvl]:'pile'} ${value(it)}`,cls:'alt'}));
+    opts2.unshift({key:'keep',label:'Keep everything'});
+    const c3=await choice(opts2,id);
+    if(c3!=='keep'){const it=d.carried.splice(+c3.slice(1),1)[0]; tile.item=it; renderTiles(); log(`You dropped ${value(it)} worth of ${itemName(it)}.`);}
+  }
+  renderAll();
+}
+async function take(d,tile,id){
+  const it=tile.item; tile.item=null; renderTiles();
+  if(it.mimic){
+    sfx.bad(); G.shark=Math.max(0,G.shark-2); renderTokens();
+    log(d.isPlayer?'It was a mimic! An anglerfish lunges and Papa surges 2 spaces closer.':`${d.name} grabbed a mimic. Papa surges 2 spaces closer.`,true);
+    await sleep(700,id); renderAll(); await catchCheck(d,id); return;
+  }
+  d.carried.push(it); if(d.isPlayer){sfx.take(); log(`You took ${itemName(it)} worth ${value(it)}.`);} else log(`${d.name} took a ${it.stack?'sunken pile':NAMES[it.lvl]+' tile'}.`);
+  renderAll();
+}
+async function rivalTurn(d,id){
+  const c=d.cfg;
+  waiting(`${d.name} is diving…`);
+  if(!d.turned&&d.pos>=0&&(d.carried.length>=c.cap||G.oxygen<=c.turnAt+d.pos*0.4||noDeeper(d))){
+    d.turned=true;d.dir=-1;log(`${d.name} turns back.`);renderTokens();await sleep(350,id);
+  }
+  follow(d.pos<0?-1:d.pos); await sleep(250,id);
+  const roll=await rollDice(d.rng,id,d.name);
+  await move(d,stepsFor(d,roll),id);
+  if(d.back){await sleep(400,id);return;}
+  if(await catchCheck(d,id)) return;
+  const t=G.track[d.pos];
+  if(t.item&&d.carried.length<c.cap){
+    const it=t.item, lvl=it.stack?4:it.lvl;
+    const want=d.dir>0?lvl>=c.downMin:lvl>=c.upMin;
+    if(want&&!(showVals()&&it.mimic)) await take(d,t,id);
+  }
+  await sleep(450,id);
+}
+async function catchCheck(d,id){
+  if(!active(d)||d.pos<0||d.pos<G.shark||G.shark>=G.track.length) return false;
+  await bite(d,id); return true;
+}
+async function bite(d,id){
+  sfx.shark(); follow(d.pos); renderTokens();
+  const mult=G.event.id==='frenzy'?2:1;
+  let feed=-1;
+  if(d.isPlayer){
+    if(d.carried.length){
+      log('Papa reached you! Feed him a treasure to push him back, or lose everything you carry.',true);
+      const opts=d.carried.map((it,i)=>{const lv=it.stack?4:it.lvl;return {key:'f'+i,label:`Feed ${value(it)} (back ${lv*mult})`};});
+      opts.push({key:'bite',label:'Let him bite',cls:'red'});
+      const c=await choice(opts,id); if(c!=='bite') feed=+c.slice(1);
+    } else { log('Papa reached you with nothing to feed him. You flee to the jahazi, out for this dive.',true); }
+  } else if(d.carried.length){
+    let bi=0; d.carried.forEach((it,i)=>{if(value(it)<value(d.carried[bi]))bi=i;}); feed=bi;
+  }
+  if(feed>=0){
+    const it=d.carried.splice(feed,1)[0], lv=it.stack?4:it.lvl;
+    G.shark=Math.min(G.track.length,G.shark+lv*mult);
+    log(d.isPlayer?`You fed Papa ${value(it)} worth of ${itemName(it)}. He sinks back ${lv*mult}.`:`${d.name} fed Papa some ${itemName(it)}. He sinks back ${lv*mult}.`);
+    renderAll(); await sleep(600,id); return 'fed';
+  }
+  const had=d.carried.length;
+  G.sunk.push(...d.carried); d.carried=[]; d.out=true; d.fate='bitten'; d.pos=-1;
+  if(!d.isPlayer) log(had?`Papa caught ${d.name}. Their loot sinks to the bottom.`:`Papa chased ${d.name} out of the water.`);
+  else if(had) log('Papa caught you. Your loot sinks to the bottom.');
+  renderAll(); await sleep(800,id); return 'bitten';
+}
+async function sharkPhase(id){
+  const sp=sharkSpeed(); if(!sp) return;
+  for(let s=0;s<sp;s++){
+    if(G.shark>0) G.shark--; renderTokens(); await sleep(260,id);
+    const victims=G.divers.filter(d=>active(d)&&d.pos>=0&&d.pos>=G.shark).sort((a,b)=>b.pos-a.pos);
+    for(const v of victims){ if(!active(v)||v.pos<G.shark) continue; const r=await bite(v,id); if(r==='fed') return; }
+  }
+}
+async function airOut(id){
+  sfx.bad(); log('The tank is empty! Everyone still underwater drops their loot.',true);
+  for(const d of G.divers) if(active(d)){ G.sunk.push(...d.carried); d.carried=[]; d.out=true; d.fate='drowned'; d.pos=-1; }
+  renderAll(); await sleep(900,id);
+}
+async function runDive(id){
+  while(true){
+    for(const d of G.divers){
+      if(!active(d)) continue;
+      G.turnOf=d; renderTokens();
+      if(d.carried.length){ G.oxygen=Math.max(0,G.oxygen-d.carried.length); renderHud(); }
+      if(G.oxygen<=0) G.airOut=true;
+      if(d.isPlayer) await playerTurn(d,id); else await rivalTurn(d,id);
+      if(G.airOut){ await airOut(id); return; }
+      if(allDone()) return;
+    }
+    G.turnOf=null; waiting('Papa stirs…'); await sharkPhase(id);
+    if(allDone()) return;
+  }
+}
+
+/* ---------- summaries ---------- */
+const fateTxt=d=>d.fate==='safe'?`Back safe, +${d.gain}`:d.fate==='bitten'?'Caught by Papa, +0':'Out of air, +0';
+function tierOf(s){let t=TIERS[0][1];for(const [m,n] of TIERS) if(s>=m) t=n;return t;}
+async function diveSummary(id){
+  G.turnOf=null; renderAll(); $('#actions').innerHTML=''; $('#diceRow').innerHTML='';
+  const last=G.dive===2;
+  const nxt=last?null:G.events[G.dive+1];
+  $('#sumCard').innerHTML=`<h2>Dive ${G.dive+1} done</h2>
+    <div class="rows">${G.divers.map(d=>`<div class="row ${d.isPlayer?'me':''}"><span>${d.name}<small>${fateTxt(d)}</small></span><b>${d.banked}</b></div>`).join('')}</div>
+    ${nxt?`<p class="muted">Next dive: ${nxt.name}. ${nxt.desc} Taken tiles are cleared and lost loot sinks to the bottom in piles.</p>`:''}
+    <div class="stack-btns"><button class="btn" id="nextBtn">${last?'See final score':'Start dive '+(G.dive+2)}</button></div>`;
+  $('#sumO').classList.add('show'); const b=$('#nextBtn'); b.focus({preventScroll:true});
+  await waitFor(b,id); $('#sumO').classList.remove('show');
+}
+function finalScreen(){
+  const me=G.divers[0], s=me.banked, tier=tierOf(s);
+  const ranked=G.divers.slice().sort((a,b)=>b.banked-a.banked);
+  const place=ranked.indexOf(me)+1;
+  let bestLine='';
+  if(G.daily){ const k='zamia.daily.'+DATE_KEY, prev=parseInt(store(k)); if(isNaN(prev)||s>prev){store(k,String(s));bestLine='Your best on today\'s trench.';} else bestLine=`Today's best: ${prev} (${tierOf(prev)}).`; }
+  const nextT=TIERS.find(t=>t[0]>s);
+  $('#sumCard').innerHTML=`<h2>${s} points</h2>
+    <p><b>${tier}</b>${nextT?`. ${nextT[1]} starts at ${nextT[0]}.`:'. The top of the ladder.'}</p>
+    <p class="muted">${place===1?'You beat both rivals.':place===2?'Second place. One rival out-dived you.':'Both rivals out-dived you.'} ${bestLine}</p>
+    <div class="rows">${ranked.map(d=>`<div class="row ${d.isPlayer?'me':''}"><span>${d.name}</span><b>${d.banked}</b></div>`).join('')}</div>
+    <div class="stack-btns">
+      <button class="btn" id="shareBtn">Share result</button>
+      <button class="btn alt" id="againBtn">${G.daily?'Dive today\'s trench again':'New practice trench'}</button>
+      <button class="btn alt" id="menuBtn">Back to menu</button>
+    </div>`;
+  $('#sumO').classList.add('show');
+  const daily=G.daily;
+  $('#shareBtn').onclick=()=>share(s,tier);
+  $('#againBtn').onclick=()=>newGame(daily);
+  $('#menuBtn').onclick=showMenu;
+  $('#shareBtn').focus({preventScroll:true});
+}
+async function share(s,tier){
+  const [,b,z]=G.divers;
+  const text=G.daily?`Zamia daily trench, ${DATE_LABEL}: ${s} points (${tier}). Baraka ${b.banked}, Zawadi ${z.banked}. Same trench for everyone today. Dive in:`:`I banked ${s} points (${tier}) in Zamia. Dive in:`;
+  const url=location.href;
+  try{ if(navigator.share){ await navigator.share({text,url}); return; } }catch(e){ if(e&&e.name==='AbortError') return; }
+  try{ await navigator.clipboard.writeText(text+' '+url); toast('Copied. Paste it in WhatsApp.'); }catch(e){ toast('Sharing is not available here'); }
+}
+let tt; function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2200);}
+
+async function run(id){
+  for(let d=0;d<3;d++){
+    setupDive(d);
+    log(d===0?'Three dives. Only treasure you bring back to the jahazi counts.':`Dive ${d+1} begins. The tank is refilled.`,true);
+    await sleep(500,id);
+    await runDive(id);
+    await diveSummary(id);
+  }
+  finalScreen();
+}
+
+/* ---------- menu ---------- */
+function showMenu(){
+  RUN++; if(rejectCur){const r=rejectCur;rejectCur=null;r();}
+  $('#sumO').classList.remove('show');
+  const prev=parseInt(store('zamia.daily.'+DATE_KEY));
+  $('#menuBest').textContent=isNaN(prev)?`Today's trench (${DATE_LABEL}) is the same for every diver.`:`Your best on today's trench: ${prev} (${tierOf(prev)}).`;
+  $('#dailyBtn').textContent=`Dive today's trench, ${DATE_LABEL}`;
+  $('#menu').classList.add('show'); $('#dailyBtn').focus({preventScroll:true});
+}
+$('#legend').innerHTML=[1,2,3,4].map(l=>`<div class="leg">${shapeHTML({lvl:l,val:0},false)}<span>${TITLE[l]}<small>${RANGE[l]} points</small></span></div>`).join('');
+$('#dailyBtn').onclick=()=>{ensureAudio();newGame(true);};
+$('#practiceBtn').onclick=()=>{ensureAudio();newGame(false);};
+window.addEventListener('resize',()=>{ if(G&&$('#trench').clientWidth!==BW){ buildBoard(); renderAll(); } });
+
+/* idle board behind the menu */
+G={daily:true,seed:'idle',dive:0,track:makeTrench(rngFor('zamia-'+DATE_KEY,'layout')),events:[EVENTS[0]],sunk:[],logs:[],turnOf:null,
+   divers:[{name:'You',short:'You',color:'#f26b1d',isPlayer:true,banked:0}].concat(RIVALS.map(c=>({name:c.name,short:c.short,color:c.color,cfg:c,banked:0})))};
+G.event=EVENTS[0]; G.maxO2=25; G.oxygen=25; G.shark=G.track.length;
+for(const v of G.divers){v.pos=-1;v.dir=1;v.carried=[];v.back=false;v.out=false;}
+buildBoard(); renderAll(); $('#event').innerHTML='<b>Zamia.</b> Dive, grab, and get back before the air or Papa runs out your luck.';
+showMenu();
+})();
+</script>
+</body>
+</html>

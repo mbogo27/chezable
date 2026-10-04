@@ -1,0 +1,7 @@
+#play{touch-action:none}
+#cv{cursor:pointer;outline:none}
+#cv:focus-visible{outline:3px solid var(--tape);outline-offset:-3px}
+.moves{text-align:center;line-height:1}
+.moves b{display:block;font-family:var(--font-display);font-weight:400;font-size:24px}
+.moves span{font-size:13px;font-weight:700;color:var(--muted)}
+.tip{text-align:center;font-size:15px;font-weight:600;color:var(--muted);padding:0 16px 14px;min-height:20px;margin:0}

@@ -1,0 +1,45 @@
+/* Chezable design tokens (build spec §2.2). Blue is Chezable, orange is play. */
+@font-face{font-family:"Archivo Black";font-style:normal;font-weight:400;font-display:swap;src:url(/shell/fonts/archivo-black.woff2) format("woff2")}
+/* Barlow 500 shares the 600 file to stay inside the 60 KB font budget (§9.5). */
+@font-face{font-family:"Barlow";font-style:normal;font-weight:500 600;font-display:swap;src:url(/shell/fonts/barlow-600.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-style:normal;font-weight:700;font-display:swap;src:url(/shell/fonts/barlow-700.woff2) format("woff2")}
+
+:root{
+  color-scheme: light dark;
+  --chez-blue:#5271FF;
+  --chez-blue-ink:#3A56E0;
+  --play:#F26B1D;
+  --tape:#FFD21F;
+  --line:#1B1D1E;
+  --ink:#1B1D1E;
+  --muted:#566166;
+  --paper:#FFFFFF;
+  --board:#DFE4E2;
+  --hole:rgba(40,58,64,.2);
+  --chip:#EEF1F0;
+  --veil:rgba(223,228,226,.66);
+  --success:#3FBF6A;
+  --success-ink:#1F7A40;
+  --danger:#E5322A;
+  --wordmark-able:#1B1D1E;
+  --font-display:"Archivo Black",Impact,"Arial Black",sans-serif;
+  --font-ui:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --bar-h:52px;
+  --radius-card:22px;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --safe-l:env(safe-area-inset-left,0px);
+  --safe-r:env(safe-area-inset-right,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --chez-blue-ink:#8EA2FF; --ink:#F2F0EB; --muted:#9DB0B7; --paper:#18242A; --board:#22323A;
+    --hole:rgba(0,0,0,.38); --chip:#22323A; --veil:rgba(20,30,35,.72); --danger:#E5544A; --success-ink:#6FDC93;
+    --wordmark-able:#F2F0EB;
+  }
+}
+:root[data-theme="dark"]{
+  --chez-blue-ink:#8EA2FF; --ink:#F2F0EB; --muted:#9DB0B7; --paper:#18242A; --board:#22323A;
+  --hole:rgba(0,0,0,.38); --chip:#22323A; --veil:rgba(20,30,35,.72); --danger:#E5544A; --success-ink:#6FDC93;
+  --wordmark-able:#F2F0EB;
+}

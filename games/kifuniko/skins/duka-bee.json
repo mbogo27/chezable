@@ -1,0 +1,8 @@
+{
+  "brand": "Duka Bee",
+  "palette": { "frame": "#F2B632", "piece": "#1B1D1E", "special": "#F26B1D", "drink": "#FFD21F" },
+  "specialIcon": "bee.svg",
+  "copy": { "title": "Duka Bee Drop", "win": "Your duka is live!" },
+  "cta": { "label": "Build your duka", "url": "https://dukabee.co.ke" },
+  "logoPlacement": "result-sheet-only"
+}

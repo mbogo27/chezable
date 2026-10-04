@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nyanya Jetpack · Chezable</title>
+<meta name="description" content="Hold to fire the jetpack and keep the tomato off the spikes.">
+<meta name="theme-color" content="#5271FF">
+<meta property="og:title" content="Nyanya Jetpack · Chezable">
+<meta property="og:description" content="Hold to fire the jetpack and keep the tomato off the spikes.">
+<meta property="og:image" content="/og/nyanya-jetpack.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/shell/ui.css">
+<link rel="stylesheet" href="/g/nyanya-jetpack/style.css">
+</head>
+<body>
+<main id="stage" aria-label="Nyanya Jetpack. Hold the screen or the Space key to fire the jetpack. Avoid the spikes and mines.">
+  <div class="stage-hud">
+    <div class="hud-score"><b id="dist">0 m</b><span id="sub"></span></div>
+    <div class="spacer"></div>
+    <span class="pill" id="tier">Bronze</span>
+  </div>
+  <div class="stage-canvas" id="play">
+    <canvas id="cv" role="img" aria-label="A tomato with a jetpack flying through a spiked tunnel"></canvas>
+    <div id="hint" class="hint" hidden></div>
+  </div>
+</main>
+<script src="/shell/chez.js"></script>
+<script type="module" src="/g/nyanya-jetpack/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cut it in half</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light dark;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --board:#dfe4e2; --hole:rgba(40,58,64,.2); --ink:#1b1d1e; --muted:#566166;
+  --paper:#ffffff; --saw:#f26b1d; --tape:#ffd21f; --line:#1b1d1e;
+  --veil:rgba(223,228,226,.72);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --board:#22323a; --hole:rgba(0,0,0,.38); --ink:#f2f0eb; --muted:#9db0b7;
+    --paper:#18242a; --veil:rgba(20,30,35,.78);
+  }
+}
+:root[data-theme="dark"]{
+  --board:#22323a; --hole:rgba(0,0,0,.38); --ink:#f2f0eb; --muted:#9db0b7;
+  --paper:#18242a; --veil:rgba(20,30,35,.78);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;height:100%;overflow:hidden;color:var(--ink);
+  font-family:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background: radial-gradient(circle, var(--hole) 2.2px, transparent 2.7px) 0 0/24px 24px, var(--board);
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;
+}
+#app{height:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;touch-action:manipulation}
+.bar{display:flex;align-items:center;gap:14px;padding:12px 16px 4px}
+.who{display:flex;flex-direction:column;line-height:1.1;min-width:0}
+#who{font-family:"Archivo Black",Impact,sans-serif;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#round{font-size:15px;color:var(--muted);font-weight:600}
+.spacer{flex:1}
+#total{font-size:15px;font-weight:700;color:var(--muted);text-align:right;line-height:1.15}
+#total b{display:block;color:var(--ink);font-family:"Archivo Black",Impact,sans-serif;font-weight:400;font-size:18px}
+.icon-btn{width:44px;height:44px;border-radius:50%;border:3px solid var(--line);background:var(--paper);color:var(--ink);font-size:18px;display:grid;place-items:center;cursor:pointer;box-shadow:0 3px 0 var(--line);flex:none}
+.icon-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--line)}
+
+#stage{position:relative;flex:1;min-height:300px;overflow:hidden;cursor:pointer}
+#stage.shake{animation:shake .22s linear}
+@keyframes shake{
+  0%{transform:translate(0,0)}20%{transform:translate(-5px,3px)}40%{transform:translate(4px,-3px)}
+  60%{transform:translate(-3px,2px)}80%{transform:translate(2px,-1px)}100%{transform:translate(0,0)}
+}
+#saw{position:absolute;left:0;top:0;transform-origin:0 0;filter:drop-shadow(0 6px 0 rgba(0,0,0,.14));will-change:transform}
+#guide{position:absolute;left:0;top:0;width:3px;background:repeating-linear-gradient(180deg,var(--tape) 0 7px,transparent 7px 12px);transition:opacity .15s}
+.slab{position:absolute;overflow:hidden;border:3px solid var(--line);border-radius:6px;box-shadow:0 7px 0 rgba(0,0,0,.16)}
+#pieceL,#pieceR{display:none}
+.wood{position:absolute;top:0;bottom:0;left:0;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.5) 0 0) top left/100% 0 no-repeat,
+    repeating-linear-gradient(90deg, rgba(40,20,5,.55) 0 2px, transparent 2px 10%) top left/100% 11px no-repeat,
+    repeating-linear-gradient(90deg, rgba(40,20,5,.28) 0 1px, transparent 1px 2%) top left/100% 6px no-repeat,
+    radial-gradient(ellipse 22px 9px at 27% 62%, rgba(110,55,15,.55), rgba(110,55,15,.15) 60%, transparent 72%),
+    radial-gradient(ellipse 30px 7px at 71% 38%, rgba(110,55,15,.35), transparent 70%),
+    repeating-linear-gradient(177deg, transparent 0 6px, rgba(120,62,18,.16) 6px 7px, transparent 7px 13px),
+    linear-gradient(180deg,#eab978,#cf904d);
+}
+.mark{position:absolute;font-family:"Archivo Black",Impact,"Arial Black",sans-serif;color:#fff;-webkit-text-stroke:2.5px var(--line);paint-order:stroke fill;letter-spacing:.5px;white-space:nowrap;pointer-events:none;text-shadow:0 3px 0 rgba(0,0,0,.25)}
+#plankMark{left:50%;top:50%;transform:translate(-50%,-50%)}
+#labL,#labR{display:none;transform-origin:50% 50%}
+.dust{position:absolute;width:6px;height:6px;border-radius:2px;background:#e3b06c;pointer-events:none}
+
+#panel{min-height:158px;padding:10px 20px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px}
+.big{font-family:"Archivo Black",Impact,sans-serif;font-size:26px;margin:0;line-height:1.1}
+.sub{margin:0;font-size:17px;font-weight:600;color:var(--muted)}
+.rating{font-family:"Archivo Black",Impact,sans-serif;font-size:34px;margin:0;line-height:1;color:#fff;-webkit-text-stroke:3px var(--line);paint-order:stroke fill;text-shadow:0 4px 0 var(--line)}
+.rating.hot{color:var(--tape)}
+.nums{margin:4px 0 8px;font-size:18px;font-weight:600}
+.pulse{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+
+.btn{font:700 18px/1 "Barlow",system-ui,sans-serif;padding:15px 22px;border-radius:14px;border:3px solid var(--line);cursor:pointer;box-shadow:0 5px 0 var(--line);min-width:180px;color:var(--line);background:var(--saw)}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--line)}
+.btn.alt{background:var(--paper);color:var(--ink)}
+.btn.wide{width:100%}
+button:focus-visible,input:focus-visible{outline:3px solid var(--tape);outline-offset:3px}
+
+.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 20px) 18px calc(env(safe-area-inset-bottom,0px) + 20px);background:var(--veil);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);z-index:10;overflow-y:auto}
+.overlay.show{display:flex}
+.card{width:100%;max-width:380px;background:var(--paper);border:3px solid var(--line);border-radius:22px;box-shadow:0 7px 0 var(--line);padding:24px 20px;display:flex;flex-direction:column;gap:12px;margin:auto}
+.title-plank{position:relative;height:84px;border:3px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:4px;transform:rotate(-2deg)}
+.title-plank .wood{right:0}
+.title-plank .mark{left:50%;top:54%;transform:translate(-50%,-50%);font-size:30px}
+.card p{margin:0;font-size:17px;line-height:1.4}
+.card h2{margin:0;font-family:"Archivo Black",Impact,sans-serif;font-weight:400;font-size:30px;line-height:1.1}
+.muted{color:var(--muted);font-weight:600}
+.names{display:none;flex-direction:column;gap:10px}
+.names.show{display:flex}
+.names input{font:600 18px "Barlow",system-ui,sans-serif;padding:13px 14px;border-radius:12px;border:3px solid var(--line);background:var(--board);color:var(--ink);user-select:text;-webkit-user-select:text;width:100%}
+.rows{display:flex;flex-direction:column;gap:6px;margin:4px 0}
+.row{display:flex;justify-content:space-between;gap:12px;font-size:17px;font-weight:600;padding:8px 12px;border-radius:10px;background:var(--board)}
+.row.win{outline:3px solid var(--saw)}
+.row b{font-weight:700}
+.stack{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 24px);transform:translate(-50%,20px);opacity:0;background:var(--line);color:#fff;padding:12px 18px;border-radius:12px;font-weight:700;transition:.25s;z-index:20;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion: reduce){
+  #stage.shake{animation:none}
+  .pulse{animation:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="bar">
+    <div class="who"><span id="who">Cut it in half</span><span id="round">Stop the saw at 50 cm</span></div>
+    <div class="spacer"></div>
+    <div id="total"></div>
+    <button class="icon-btn" id="mute" aria-label="Mute sound">🔊</button>
+  </header>
+
+  <section id="stage" aria-label="Game board. Tap to cut.">
+    <div id="guide"></div>
+    <div id="plank" class="slab"><div class="wood"></div><span class="mark" id="plankMark">100CM</span></div>
+    <div id="pieceL" class="slab"><div class="wood"></div></div>
+    <div id="pieceR" class="slab"><div class="wood"></div></div>
+    <span class="mark" id="labL"></span>
+    <span class="mark" id="labR"></span>
+    <div id="saw"></div>
+  </section>
+
+  <footer id="panel" aria-live="polite"></footer>
+</div>
+
+<div class="overlay show" id="menu">
+  <div class="card">
+    <div class="title-plank"><div class="wood" style="width:100%"></div><span class="mark">Cut it in half</span></div>
+    <p>Stop the saw at exactly 50 cm. Three cuts each, and the lowest total wins.</p>
+    <p class="muted" id="bestLine"></p>
+    <div class="stack" id="modeBtns">
+      <button class="btn wide" id="soloBtn">Play solo</button>
+      <button class="btn alt wide" id="vsBtn">Play against a friend</button>
+    </div>
+    <div class="names" id="names">
+      <input id="n1" maxlength="14" placeholder="Player 1" aria-label="Player 1 name" autocomplete="off">
+      <input id="n2" maxlength="14" placeholder="Player 2" aria-label="Player 2 name" autocomplete="off">
+      <button class="btn wide" id="startVs">Start match</button>
+      <button class="btn alt wide" id="backBtn">Back</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="pass">
+  <div class="card" style="text-align:center">
+    <h2 id="passName"></h2>
+    <p class="muted" id="passRound"></p>
+    <button class="btn wide" id="readyBtn">I'm ready</button>
+  </div>
+</div>
+
+<div class="overlay" id="final">
+  <div class="card" id="finalCard"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const stage=$('#stage'), saw=$('#saw'), guide=$('#guide'), plank=$('#plank');
+const pL=$('#pieceL'), pR=$('#pieceR'), labL=$('#labL'), labR=$('#labR'), plankMark=$('#plankMark');
+const panel=$('#panel');
+const ROUNDS=3, SPEEDS=[1.55,2.15,2.85];
+const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function store(k,v){try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v);}catch(e){return null}}
+
+/* ---------- saw drawing ---------- */
+(function drawSaw(){
+  let teeth='';
+  for(let y=74;y<182;y+=6){teeth+=`M31 ${y}L26 ${y+3}L31 ${y+6}Z M49 ${y}L54 ${y+3}L49 ${y+6}Z `;}
+  saw.innerHTML=`<svg viewBox="0 0 80 196" width="80" height="196" aria-hidden="true">
+    <path d="M40 84H11a6 6 0 0 1-6-6V68" fill="none" stroke="#1b1d1e" stroke-width="10" stroke-linecap="round"/>
+    <path d="M40 84H11a6 6 0 0 1-6-6V68" fill="none" stroke="#aab3b7" stroke-width="5" stroke-linecap="round"/>
+    <path d="${teeth}" fill="#8e979c" stroke="#1b1d1e" stroke-width="1.5" stroke-linejoin="round"/>
+    <rect x="31" y="68" width="18" height="122" rx="9" fill="#d5dadd" stroke="#1b1d1e" stroke-width="3"/>
+    <line x1="40" y1="80" x2="40" y2="178" stroke="#a0a9ad" stroke-width="2" stroke-linecap="round"/>
+    <path d="M27 24V11a7 7 0 0 1 7-7h12a7 7 0 0 1 7 7v13" fill="none" stroke="#1b1d1e" stroke-width="7" stroke-linecap="round"/>
+    <rect x="15" y="18" width="50" height="56" rx="12" fill="#f26b1d" stroke="#1b1d1e" stroke-width="3"/>
+    <path d="M18 60h44v2a10 10 0 0 1-10 10H28a10 10 0 0 1-10-10z" fill="#cf5316"/>
+    <path d="M29 30v16M36 30v16M43 30v16" stroke="#1b1d1e" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="55" cy="40" r="4" fill="#1b1d1e"/>
+  </svg>`;
+})();
+
+/* ---------- layout ---------- */
+let SW,SH,W,PH,PL,PT,sc, curT=0.5, lw=0;
+function layout(){
+  const r=stage.getBoundingClientRect(); SW=r.width; SH=r.height;
+  W=Math.min(SW*0.86,460);
+  PH=Math.round(Math.max(52,Math.min(70,W*0.15)));
+  sc=Math.max(0.7,Math.min(1.1,(SH*0.52)/196));
+  PT=Math.round(Math.max(196*sc+16, SH*0.56));
+  if(PT+PH>SH-14) PT=SH-PH-14;
+  PL=(SW-W)/2;
+  Object.assign(plank.style,{left:PL+'px',top:PT+'px',width:W+'px',height:PH+'px'});
+  document.querySelectorAll('#stage .wood').forEach(el=>el.style.width=W+'px');
+  const fs=Math.round(Math.min(34,PH*0.52));
+  plankMark.style.fontSize=fs+'px';
+  labL.style.fontSize=labR.style.fontSize=Math.round(fs*0.82)+'px';
+  guide.style.height=(PH+12)+'px';
+  if(state==='result'||state==='cutting'){ lw=cutT*W; setPieces(16,3.5); showLabels(1); positionSaw(cutT,0); }
+  else positionSaw(curT,0);
+}
+function positionSaw(t,drop){
+  const x=PL+t*W;
+  saw.style.transform=`translate(${x-40*sc}px,${PT-190*sc-6+drop}px) scale(${sc})`;
+  guide.style.transform=`translate(${x-1.5}px,${PT-6}px)`;
+}
+function setPieces(spread,rot){
+  Object.assign(pL.style,{left:PL+'px',top:PT+'px',width:lw+'px',height:PH+'px',transform:`translateX(${-spread}px) rotate(${-rot}deg)`});
+  Object.assign(pR.style,{left:(PL+lw)+'px',top:PT+'px',width:(W-lw)+'px',height:PH+'px',transform:`translateX(${spread}px) rotate(${rot}deg)`});
+  pR.querySelector('.wood').style.left=(-lw)+'px';
+  labL.dataset.x=PL+lw/2-spread; labR.dataset.x=PL+lw+(W-lw)/2+spread;
+}
+function showLabels(k){
+  const y=PT+PH/2;
+  for(const el of [labL,labR]){
+    el.style.display='block';
+    el.style.left=el.dataset.x+'px'; el.style.top=y+'px';
+    el.style.transform=`translate(-50%,-50%) scale(${k})`;
+  }
+}
+function resetPlank(){
+  plank.style.display='block'; pL.style.display=pR.style.display='none';
+  labL.style.display=labR.style.display='none';
+  guide.style.opacity=1;
+}
+
+/* ---------- tweens + loop ---------- */
+const tweens=[], dusts=[];
+function tween(dur,fn,done,delay=0){tweens.push({start:performance.now()+delay,dur,fn,done});}
+const easeIn=p=>p*p, easeOut=p=>1-(1-p)*(1-p);
+const easeOutBack=p=>{const c=1.9;return 1+(c+1)*Math.pow(p-1,3)+c*Math.pow(p-1,2)};
+
+let state='menu', phase=0, speed=1.5, aimStart=0, last=performance.now(), cutT=0.5;
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(state==='aiming'){
+    phase+=dt*speed*(1+0.22*Math.sin(now/1000*0.9));
+    curT=0.5+0.42*Math.sin(phase);
+    positionSaw(curT,0);
+  }
+  for(let i=tweens.length-1;i>=0;i--){
+    const tw=tweens[i]; const p=(now-tw.start)/tw.dur;
+    if(p<0) continue;
+    tw.fn(Math.min(1,p));
+    if(p>=1){tweens.splice(i,1); tw.done&&tw.done();}
+  }
+  for(let i=dusts.length-1;i>=0;i--){
+    const d=dusts[i]; d.life-=dt;
+    d.vy+=900*dt; d.x+=d.vx*dt; d.y+=d.vy*dt;
+    d.el.style.transform=`translate(${d.x}px,${d.y}px) rotate(${d.r+=d.vr*dt}deg)`;
+    d.el.style.opacity=Math.max(0,d.life/d.max);
+    if(d.life<=0){d.el.remove(); dusts.splice(i,1);}
+  }
+  requestAnimationFrame(loop);
+}
+function sawdust(x,y){
+  if(reduce) return;
+  for(let i=0;i<18;i++){
+    const el=document.createElement('span'); el.className='dust';
+    if(i%3===0) el.style.background='#c98a45';
+    stage.appendChild(el);
+    const a=-Math.PI/2+(Math.random()-0.5)*2.4, v=160+Math.random()*260;
+    dusts.push({el,x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:Math.random()*90,vr:(Math.random()-0.5)*600,life:0.7+Math.random()*0.3,max:1});
+  }
+}
+function shake(){ if(reduce) return; stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); }
+
+/* ---------- audio ---------- */
+let ac=null, master=null, eng=null, muted=store('halfcut.muted')==='1';
+const muteBtn=$('#mute');
+function paintMute(){muteBtn.textContent=muted?'🔇':'🔊';muteBtn.setAttribute('aria-label',muted?'Turn sound on':'Mute sound');}
+paintMute();
+function ensureAudio(){
+  if(ac){ if(ac.state==='suspended') ac.resume(); return; }
+  try{
+    ac=new (window.AudioContext||window.webkitAudioContext)();
+    master=ac.createGain(); master.gain.value=muted?0:0.9; master.connect(ac.destination);
+  }catch(e){ac=null;}
+}
+function startEngine(){
+  if(!ac) return; stopEngine();
+  const g=ac.createGain(); g.gain.value=0;
+  const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=650;
+  const o1=ac.createOscillator(); o1.type='sawtooth'; o1.frequency.value=52;
+  const o2=ac.createOscillator(); o2.type='square'; o2.frequency.value=104.7;
+  const g2=ac.createGain(); g2.gain.value=0.3;
+  o1.connect(f); o2.connect(g2); g2.connect(f); f.connect(g); g.connect(master);
+  o1.start(); o2.start(); g.gain.setTargetAtTime(0.045,ac.currentTime,0.08);
+  eng={o1,o2,g};
+}
+function stopEngine(){
+  if(!eng||!ac) return; const e=eng; eng=null;
+  e.g.gain.setTargetAtTime(0,ac.currentTime,0.03);
+  setTimeout(()=>{try{e.o1.stop();e.o2.stop();}catch(_){}} ,300);
+}
+function sfxCut(){
+  if(!ac) return; const t=ac.currentTime;
+  const len=Math.floor(ac.sampleRate*0.4), buf=ac.createBuffer(1,len,ac.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+  const n=ac.createBufferSource(); n.buffer=buf;
+  const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=2300; bp.Q.value=0.8;
+  const ng=ac.createGain(); ng.gain.setValueAtTime(0.38,t); ng.gain.exponentialRampToValueAtTime(0.001,t+0.36);
+  n.connect(bp); bp.connect(ng); ng.connect(master); n.start(t); n.stop(t+0.4);
+  const o=ac.createOscillator(); o.type='sawtooth'; o.frequency.setValueAtTime(90,t); o.frequency.exponentialRampToValueAtTime(240,t+0.16);
+  const og=ac.createGain(); og.gain.setValueAtTime(0.12,t); og.gain.exponentialRampToValueAtTime(0.001,t+0.25);
+  o.connect(og); og.connect(master); o.start(t); o.stop(t+0.3);
+}
+function sfxThunk(){
+  if(!ac) return; const t=ac.currentTime;
+  const o=ac.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(55,t+0.14);
+  const g=ac.createGain(); g.gain.setValueAtTime(0.35,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.2);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t+0.22);
+}
+muteBtn.addEventListener('click',()=>{
+  ensureAudio(); muted=!muted; store('halfcut.muted',muted?'1':'0');
+  if(master) master.gain.value=muted?0:0.9; paintMute();
+});
+
+/* ---------- game ---------- */
+let mode='solo', players=[], order=[], idx=0;
+const fmt=n=>(Math.round(n*10)/10).toFixed(1);
+const total=p=>Math.round(p.cuts.reduce((a,c)=>a+c.err,0)*10)/10;
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function rating(err){
+  if(err<=0.2) return 'Perfect half';
+  if(err<=1) return 'Razor close';
+  if(err<=3) return 'Close';
+  if(err<=8) return 'Wobbly';
+  return 'Way off';
+}
+
+function startGame(m,names){
+  mode=m;
+  players=names.map(n=>({name:n,cuts:[]}));
+  order=[]; for(let r=0;r<ROUNDS;r++) players.forEach((_,p)=>order.push({p,r}));
+  idx=0;
+  $('#menu').classList.remove('show'); $('#final').classList.remove('show');
+  beginTurn();
+}
+function header(){
+  const {p,r}=order[idx]; const pl=players[p];
+  $('#who').textContent= mode==='solo' ? 'Solo' : pl.name;
+  $('#round').textContent=`Cut ${r+1} of ${ROUNDS}`;
+  $('#total').innerHTML= pl.cuts.length ? `<b>${fmt(total(pl))} cm</b>off so far` : '';
+}
+function beginTurn(){
+  resetPlank(); header();
+  const {p,r}=order[idx];
+  if(mode==='vs'){
+    state='pass';
+    panel.innerHTML='';
+    $('#passName').textContent=`${players[p].name}'s turn`;
+    $('#passRound').textContent=`Cut ${r+1} of ${ROUNDS}. Pass the phone over.`;
+    $('#pass').classList.add('show');
+    setTimeout(()=>$('#readyBtn').focus(),50);
+  } else startAiming();
+}
+function startAiming(){
+  const {r}=order[idx];
+  speed=SPEEDS[r]; phase=Math.random()*Math.PI*2;
+  aimStart=performance.now(); state='aiming';
+  panel.innerHTML=`<p class="big pulse">Tap anywhere to cut</p><p class="sub">Stop the saw at 50 cm</p>`;
+  startEngine();
+}
+function cut(){
+  state='cutting'; cutT=curT;
+  const left=Math.round(cutT*1000)/10, right=Math.round((100-left)*10)/10, err=Math.round(Math.abs(left-50)*10)/10;
+  const {p}=order[idx]; players[p].cuts.push({left,right,err});
+  lw=cutT*W; guide.style.opacity=0;
+  stopEngine(); sfxCut(); try{navigator.vibrate&&navigator.vibrate(35);}catch(e){}
+  panel.innerHTML='';
+  tween(170,q=>positionSaw(cutT,easeIn(q)*(PH+14)),()=>{
+    plank.style.display='none'; pL.style.display=pR.style.display='block';
+    setPieces(0,0); sawdust(PL+lw,PT+PH*0.4); shake(); sfxThunk();
+    labL.textContent=fmt(left)+'CM'; labR.textContent=fmt(right)+'CM';
+    tween(430,q=>{const e=easeOutBack(q); setPieces(16*e,3.5*e); if(labL.style.display==='block') showLabels(Number(labL.dataset.k||1));});
+    tween(380,q=>positionSaw(cutT,(PH+14)*(1-easeOut(q))),null,140);
+    tween(260,q=>{const k=easeOutBack(q); labL.dataset.k=k; showLabels(k);},null,200);
+    setTimeout(()=>showResult(left,right,err),560);
+  });
+}
+function showResult(left,right,err){
+  state='result'; header();
+  const last=idx===order.length-1;
+  let label='Next cut';
+  if(last) label='See results';
+  else if(mode==='vs') label=`Next: ${esc(players[order[idx+1].p].name)}`;
+  panel.innerHTML=`<p class="rating ${err<=1?'hot':''}">${rating(err)}</p>
+    <p class="nums">${fmt(left)} cm and ${fmt(right)} cm, ${fmt(err)} cm off</p>
+    <button class="btn" id="nextBtn">${label}</button>`;
+  const b=$('#nextBtn'); b.addEventListener('click',next); b.focus({preventScroll:true});
+}
+function next(){
+  idx++;
+  if(idx>=order.length) return finish();
+  beginTurn();
+}
+function finish(){
+  state='final'; resetPlank(); curT=0.5; positionSaw(0.5,0);
+  panel.innerHTML=''; $('#total').innerHTML='';
+  const card=$('#finalCard');
+  if(mode==='solo'){
+    const pl=players[0], t=total(pl);
+    const prev=parseFloat(store('halfcut.best'));
+    const isBest=isNaN(prev)||t<prev; if(isBest) store('halfcut.best',String(t));
+    card.innerHTML=`<h2>${fmt(t)} cm off</h2>
+      <p class="muted">${isBest?'New personal best.':`Your best is ${fmt(prev)} cm off.`}</p>
+      <div class="rows">${pl.cuts.map((c,i)=>`<div class="row"><span>Cut ${i+1}</span><b>${fmt(c.left)} / ${fmt(c.right)}</b></div>`).join('')}</div>
+      <div class="stack"><button class="btn wide" id="shareBtn">Challenge a friend</button>
+      <button class="btn alt wide" id="againBtn">Play again</button>
+      <button class="btn alt wide" id="menuBtn">Back to menu</button></div>`;
+    $('#shareBtn').onclick=()=>share(`I cut a 100 cm plank in half 3 times and ended up just ${fmt(t)} cm off in total. Beat that:`);
+    $('#againBtn').onclick=()=>startGame('solo',['You']);
+  } else {
+    const [a,b]=players, ta=total(a), tb=total(b);
+    const winner= ta===tb ? null : (ta<tb?a:b);
+    card.innerHTML=`<h2>${winner?esc(winner.name)+' wins':"It's a draw"}</h2>
+      <p class="muted">Lowest total distance from 50 cm wins.</p>
+      <div class="rows">${players.map(pl=>`<div class="row ${pl===winner?'win':''}"><span>${esc(pl.name)}</span><b>${fmt(total(pl))} cm off</b></div>`).join('')}</div>
+      <div class="stack"><button class="btn wide" id="againBtn">Rematch</button>
+      <button class="btn alt wide" id="shareBtn">Share result</button>
+      <button class="btn alt wide" id="menuBtn">Back to menu</button></div>`;
+    $('#shareBtn').onclick=()=>share(`${a.name}: ${fmt(ta)} cm off. ${b.name}: ${fmt(tb)} cm off. ${winner?winner.name+' cut it closest.':'Dead even.'} Think you can cut a plank exactly in half?`);
+    $('#againBtn').onclick=()=>startGame('vs',[b.name,a.name]);
+  }
+  $('#menuBtn').onclick=showMenu;
+  $('#final').classList.add('show');
+  setTimeout(()=>$('#finalCard .btn').focus(),50);
+}
+async function share(text){
+  const url=location.href;
+  try{ if(navigator.share){ await navigator.share({text,url}); return; } }catch(e){ if(e&&e.name==='AbortError') return; }
+  try{ await navigator.clipboard.writeText(text+' '+url); toast('Copied. Paste it in WhatsApp.'); }
+  catch(e){ toast('Sharing is not available here'); }
+}
+let toastT; function toast(msg){const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200);}
+
+function showMenu(){
+  state='menu'; stopEngine(); resetPlank();
+  $('#who').textContent='Cut it in half'; $('#round').textContent='Stop the saw at 50 cm'; $('#total').innerHTML='';
+  panel.innerHTML='';
+  const best=parseFloat(store('halfcut.best'));
+  $('#bestLine').textContent=isNaN(best)?'':`Your best solo run: ${fmt(best)} cm off.`;
+  $('#bestLine').style.display=isNaN(best)?'none':'block';
+  $('#final').classList.remove('show'); $('#pass').classList.remove('show');
+  $('#names').classList.remove('show'); $('#modeBtns').style.display='flex';
+  $('#menu').classList.add('show');
+}
+
+/* ---------- input ---------- */
+$('#soloBtn').onclick=()=>{ensureAudio(); startGame('solo',['You']);};
+$('#vsBtn').onclick=()=>{ensureAudio(); $('#modeBtns').style.display='none'; $('#names').classList.add('show'); $('#n1').focus();};
+$('#backBtn').onclick=()=>{$('#names').classList.remove('show'); $('#modeBtns').style.display='flex';};
+$('#startVs').onclick=()=>{
+  ensureAudio();
+  const a=$('#n1').value.trim()||'Player 1', b=$('#n2').value.trim()||'Player 2';
+  startGame('vs',[a,b]);
+};
+$('#readyBtn').onclick=()=>{ensureAudio(); $('#pass').classList.remove('show'); startAiming();};
+
+function tryCut(){ if(state==='aiming' && performance.now()-aimStart>200){ ensureAudio(); cut(); } }
+$('#app').addEventListener('pointerdown',e=>{
+  if(e.target.closest('button,input')) return;
+  tryCut();
+});
+document.addEventListener('keydown',e=>{
+  if((e.code==='Space'||e.code==='Enter') && state==='aiming'){ e.preventDefault(); tryCut(); }
+});
+window.addEventListener('resize',layout);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) stopEngine(); else if(state==='aiming') startEngine(); });
+
+showMenu();
+layout();
+requestAnimationFrame(t=>{last=t; loop(t);});
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(layout);
+})();
+</script>
+</body>
+</html>

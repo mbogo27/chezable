@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ruka Kapu · Chezable</title>
+<meta name="description" content="Tap when the power bar is right to shoot into the hoops; higher hoops score more.">
+<meta name="theme-color" content="#5271FF">
+<meta property="og:title" content="Ruka Kapu · Chezable">
+<meta property="og:description" content="Tap when the power bar is right to shoot into the hoops; higher hoops score more.">
+<meta property="og:image" content="/og/ruka-kapu.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/shell/ui.css">
+<link rel="stylesheet" href="/g/ruka-kapu/style.css">
+</head>
+<body>
+<main id="stage" aria-label="Ruka Kapu. Tap or press Space when the power bar is right to shoot.">
+  <div class="stage-hud">
+    <div class="hud-score"><b id="score">0</b><span id="sub"></span></div>
+    <div class="spacer"></div>
+    <span class="pill" id="balls" aria-hidden="true"></span>
+  </div>
+  <div class="calls" id="calls" role="group" aria-label="Call a hoop" hidden></div>
+  <div class="stage-canvas" id="play"><canvas id="cv" role="img" aria-label="Five hoops on a staircase, a player with a ball, and a power bar"></canvas></div>
+</main>
+<script src="/shell/chez.js"></script>
+<script type="module" src="/g/ruka-kapu/game.js"></script>
+</body>
+</html>
