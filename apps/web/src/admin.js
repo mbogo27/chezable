@@ -32,6 +32,27 @@ export function afterAdmin() {
   async function act(path, body, ok = 'Done') {
     try { await call('POST', path, body); C.ui.toast(ok); load(); } catch (e) { C.ui.toast('Failed: ' + e.message); }
   }
+  let mDays = 14;
+  async function loadMetrics() {
+    const out = box.querySelector('[data-metrics]');
+    if (!out) return;
+    out.innerHTML = '<p class="muted">Loading…</p>';
+    let d;
+    try { d = await call('GET', '/metrics?days=' + mDays); } catch (e) { out.innerHTML = `<p class="error">${esc(e.message)}</p>`; return; }
+    const fmt = (v, ratio) => v == null ? '–' : ratio ? Math.round(v * 1000) / 10 + '%' : (Math.round(v * 100) / 100).toFixed(2);
+    out.innerHTML = `<div class="metrics">${d.metrics.map((m) => {
+      const met = m.value != null && m.value >= m.target;
+      const pct = m.value == null ? 0 : Math.min(100, (m.value / m.target) * 100);
+      const status = m.value == null ? 'No data yet' : met ? 'On target' : 'Below target';
+      return `<div class="metric ${m.value == null ? 'none' : met ? 'met' : 'below'}">
+        <div class="metric-top"><b>${esc(m.label)}</b><span class="metric-status">${status}</span></div>
+        <div class="metric-nums"><span class="metric-value">${fmt(m.value, m.ratio)}</span><span class="muted">target ${fmt(m.target, m.ratio)}</span></div>
+        <div class="metric-bar" role="img" aria-label="${esc(m.label)}: ${fmt(m.value, m.ratio)} of a ${fmt(m.target, m.ratio)} target"><span style="width:${pct}%"></span></div>
+        <small class="muted">${m.num} / ${m.den} · ${esc(m.def)}${m.den && m.den < 30 ? ' · small sample, read with care' : ''}</small>
+      </div>`;
+    }).join('')}</div>
+    <p class="muted"><small>${d.days ? 'Last ' + d.days + ' days' : 'All time'}. D1/D7 count only players whose day 1 or day 7 has already ended. Events before 4 Oct 2026 used older names, so share and link figures start from then.</small></p>`;
+  }
   async function load() {
     if (!tok()) return;
     box.innerHTML = '<p class="muted">Loading…</p>';
@@ -40,6 +61,9 @@ export function afterAdmin() {
     form.hidden = true;
     const rej = (d.rejections30d || []).map((r) => `${esc(r.tier || '?')}: ${r.n}`).join(' · ') || 'none';
     box.innerHTML = `
+      <section class="card stack" data-metrics-card><h2>Success metrics</h2>
+        <div class="seg" role="group" aria-label="Period" data-days>${[7, 14, 30, 0].map((n) => `<button data-d="${n}" aria-pressed="${n === mDays}">${n ? n + ' days' : 'All time'}</button>`).join('')}</div>
+        <div data-metrics aria-live="polite"><p class="muted">Loading…</p></div></section>
       <section class="card"><h2>Name rejections (30 days)</h2><p>${rej}</p></section>
       <section class="card"><h2>Open reports (${d.reports.length})</h2>
         <div class="rows">${d.reports.map((r) => `<div class="row"><span><b>${esc(r.handle || '(no name)')}</b><small>${esc(r.reason || '')} · ${when(r.created_at)} · ${r.open_count} open</small></span>
@@ -62,9 +86,17 @@ export function afterAdmin() {
       <section class="card"><h2>Find a player</h2>
         <form class="hstack" data-find><input class="field-input" placeholder="name or id" style="flex:1;min-height:44px;border:3px solid var(--line);border-radius:12px;padding:0 10px"><button class="btn small" type="submit">Find</button></form>
         <div data-found></div></section>`;
+    box.querySelector('[data-days]').onclick = (e) => {
+      const b = e.target.closest('[data-d]');
+      if (!b) return;
+      mDays = Number(b.dataset.d);
+      box.querySelectorAll('[data-d]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      loadMetrics();
+    };
+    loadMetrics();
     box.onclick = (e) => {
       const b = e.target.closest('button');
-      if (!b) return;
+      if (!b || b.dataset.d != null) return;
       if (b.dataset.p) return act('/player', { id: b.dataset.p, action: b.dataset.a, resolveReports: true });
       if (b.dataset.r) return act('/report', { id: b.dataset.r });
       if (b.dataset.run) return act('/run', { id: b.dataset.run, action: b.dataset.a });
