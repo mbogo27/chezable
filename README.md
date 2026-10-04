@@ -78,12 +78,12 @@ Spec §10.3, plus `POST /api/player/recovery` (issue a new recovery code) and `P
 
 ## Deployment
 
-Live at **https://chezable.com** (and www), served by the  Worker on Cloudflare, with a fallback at https://chezable.mbogo.workers.dev.
+Live at **https://chezable.com** (and www), served by the `chezable` Worker on Cloudflare, with a fallback at https://chezable.mbogo.workers.dev.
 
-- D1 database  (id in , region EEUR). Migrations: .
-- Secret  (hashes recovery codes) is set on the Worker. Never commit it; rotating it invalidates existing recovery codes.
-- chezable.com and www.chezable.com reach the Worker through routes on the proxied DNS records ( in ).
-- To ship a change:  locally, then , then push to GitHub.
+- D1 database `chezable` (id in `apps/worker/wrangler.toml`, region EEUR). Migrations: `npm run db:remote`.
+- Secret `PEPPER` (hashes recovery codes) is set on the Worker. Never commit it; rotating it invalidates existing recovery codes.
+- chezable.com and www.chezable.com reach the Worker through routes on the proxied DNS records (`routes` in `wrangler.toml`).
+- To ship a change: `npm run check` locally (with `npm run dev` running), then `npm run deploy`, then push to GitHub.
 - Domain renewal: chezable.com expires **2027-09-21** (registered at OwnRegistrar). Put it in the diary (launch checklist item 12).
 
 ## Where this differs from the spec, and why
