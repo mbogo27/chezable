@@ -12,6 +12,20 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const r = (...p) => path.resolve(root, ...p);
 const pub = r('apps/web/public');
 const noVite = process.argv.includes('--no-vite');
+
+// Google Analytics (GA4) goes into the <head> of every page: the shell and each stage.
+// GA4's enhanced measurement records the shell's client-side route changes as page views.
+const GA_ID = 'G-W2MKV0XF9V';
+const GA_TAG = `<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_ID}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', '${GA_ID}');
+</script>`;
+const withGa = (html) => (html.includes(GA_ID) ? html : html.replace(/<head>/i, `<head>\n${GA_TAG}`));
 const t0 = Date.now();
 
 // ---------- 1. catalogue from each games/<slug>/stage.json ----------
@@ -55,7 +69,7 @@ for (const s of slugs) {
   });
   let html = await readFile(path.join(src, 'index.html'), 'utf8');
   html = html.replace(/(\/g\/[a-z0-9-]+\/(?:game\.js|style\.css))/g, `$1?v=${hashOf(await readFile(path.join(out, 'game.js')))}`);
-  await writeFile(path.join(out, 'index.html'), html);
+  await writeFile(path.join(out, 'index.html'), withGa(html));
   if (existsSync(path.join(src, 'style.css'))) {
     await writeFile(path.join(out, 'style.css'), (await transform(await readFile(path.join(src, 'style.css'), 'utf8'), { loader: 'css', minify: true })).code);
   }
@@ -68,6 +82,8 @@ function hashOf(buf) { return createHash('sha1').update(buf).digest('hex').slice
 if (!noVite) {
   const { build } = await import('vite');
   await build({ configFile: r('apps/web/vite.config.js'), logLevel: 'warn' });
+  const shellHtml = r('apps/web/dist/index.html');
+  await writeFile(shellHtml, withGa(await readFile(shellHtml, 'utf8')));
 
   /* ---------- 6. service worker ---------- */
   const dist = r('apps/web/dist');
