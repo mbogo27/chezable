@@ -9,3 +9,4 @@ apps/worker/.wrangler/
 *.log
 .DS_Store
 tests/screens/
+admin-token.local.txt
