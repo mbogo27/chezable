@@ -125,7 +125,7 @@
   "name": "Name",
   "name_hint": "Use a nickname, not your real name. 3 to 16 letters, numbers, _ or -.",
   "name_taken": "That name is taken.",
-  "name_bad": "This name can't be used. Please choose another.",
+  "name_bad": "This name contains words that don't meet our community standards. Please choose another.",
   "name_invalid": "Use 3 to 16 letters, numbers, _ or -, not starting or ending with _ or -.",
   "name_claimed": "Name saved.",
   "change_name": "Change name",

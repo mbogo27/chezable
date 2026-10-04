@@ -19,11 +19,11 @@ play -> personal end screen -> challenge link on WhatsApp -> friend plays (no si
 
 | Metric | Definition | Target |
 | :--- | :--- | :--- |
-| Name claim rate | players who claim a name / players who finish a first game | _set before launch_ |
-| Share rate | sessions with a share tap / sessions with a finished game | _set before launch_ |
-| Link-to-play | challenge links opened that lead to a started game / links opened | _set before launch_ |
-| Viral coefficient (rough) | new players from challenge links / sharing players | _set before launch_ |
-| D1 / D7 return | players who play again on day 1 / day 7 | _set before launch_ |
+| Name claim rate | players who claim a name / players who finish a first game | **40%** |
+| Share rate | sessions with a share tap / sessions with a finished game | **20%** |
+| Link-to-play | challenge links opened that lead to a started game / links opened | **60%** |
+| Viral coefficient (rough) | new players from challenge links / sharing players | **0.4** |
+| D1 / D7 return | players who play again on day 1 / day 7 | **D1 25%, D7 10%** |
 
 Review after the template game has run for about two weeks with real traffic.
 
@@ -133,7 +133,7 @@ Instrument before building new features, so we have a "before" picture. Minimal 
 | Hint text | "Use a nickname, not your real name." (many players are children; also reduces personal-data exposure) |
 | Changes | one free change, then once every 14 days (open decision) |
 
-### Moderation (uses the supplied `swahili_profanity_blocklist_and_moderation_strategy.md`)
+### Moderation (uses the supplied [`swahili_profanity_blocklist_and_moderation_strategy.md`](swahili_profanity_blocklist_and_moderation_strategy.md))
 
 That file is the **seed** for the blocklist. Do not paste its terms into client-side code; keep the list and matching **server-side** so it cannot be read or probed from the browser.
 
@@ -352,5 +352,5 @@ Build on the **template game first**, then roll out to the other three.
 - [ ] Third share option: Facebook (default) or X/Telegram
 - [ ] Name change policy (default: one free change, then every 14 days)
 - [ ] Mild insults and animal-word nicknames: block, or allow and flag?
-- [ ] Success targets for section 0
+- [x] Success targets for section 0 (set 2026-10-04, in the table above)
 - [ ] Who reviews the final blocklist (native speakers across regions)

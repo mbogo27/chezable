@@ -167,11 +167,11 @@ assert.ok(ch1.nextChangeAt > Date.now()); ok('first change is free');
 const ch2 = await D.call('POST', '/player/name', { name: nm3 });
 assert.equal(ch2.status, 429); assert.equal(ch2.data.error, 'name_change_wait'); ok('next change waits 14 days');
 const flagged = new Client('F'); await flagged.register();
-await flagged.ok('POST', '/player/name', { name: `MbwaKali_${uniq.slice(0, 3)}` });
+await flagged.ok('POST', '/player/name', { name: `PundaKali_${uniq.slice(0, 3)}` });
 ok('mild/animal nickname allowed (flagged for review)');
 await A2report();
 async function A2report() {
-  const r = await D.call('POST', '/report', { name: `MbwaKali_${uniq.slice(0, 3)}`, reason: 'name' });
+  const r = await D.call('POST', '/report', { name: `PundaKali_${uniq.slice(0, 3)}`, reason: 'name' });
   assert.equal(r.status, 200); ok('report a name');
 }
 const dRun = await D.play(game, 6, { tiebreak: 20 });

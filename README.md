@@ -73,7 +73,8 @@ Defaults taken for the open decisions (spec §9), all easy to change:
 - Third share option: Facebook.
 - Name changes: one free change, then one every 14 days.
 - Mild insults and animal nicknames: allowed but flagged for review (they show on boards until an admin acts).
-- Still open: success targets (§0), and who reviews the blocklist. The supplied `swahili_profanity_blocklist_and_moderation_strategy.md` was not in the repo, so `moderation.js` holds a starter list that needs that review.
+- Success targets (§0), set 2026-10-04: name claim rate 40%, share rate 20%, link-to-play 60%, viral coefficient 0.4, D1 return 25%, D7 return 10%.
+- Blocklist: `moderation.js` follows [`docs/swahili_profanity_blocklist_and_moderation_strategy.md`](docs/swahili_profanity_blocklist_and_moderation_strategy.md). Still open: who reviews it (native speakers across regions).
 
 Old Swahili game URLs redirect (`apps/web/public/_redirects`): Kata Nusu, Toka and Kifuniko go to their English pages (301); archived or removed games go to the homepage (302).
 

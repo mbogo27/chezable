@@ -29,7 +29,7 @@ test('uniqueness key folds case and lookalikes', () => {
 test('evasions are caught: leetspeak, repeats, separators, zero-width characters', () => {
   const evasions = ['fuck', 'FUCK', 'fu_ck', 'phuck_fuuuck', 'f4ggot', 'b1tch', 'biiitch', 'sh1t', 's_h_i_t', 'k_u_m_a', 'k-u-m-a',
     'kuuuma', 'KUMA', 'ku​ma', 'f​u​ck', 'kahaba', 'k4h4b4', 'kumamako', 'kuma_mako', 'msenge', 'm5enge',
-    'mavi_mavi', 'mboooo', 'nigga', 'n1gg4', 'ass', 'a55', 'my_ass', 'sexy99', 'pussy_cat', 'dick'];
+    'mavi_mavi', 'mboooo', 'kkk', 'KKK_22', 'nigga', 'n1gg4', 'ass', 'a55', 'my_ass', 'sexy99', 'pussy_cat', 'dick'];
   for (const n of evasions) assert.ok(rejected(n), `should reject ${JSON.stringify(n)}`);
 });
 
@@ -51,11 +51,25 @@ test('whitelist corpus: real Kenyan names and places pass with zero false reject
   const wrong = corpus.filter((n) => rejected(n));
   assert.deepEqual(wrong, [], 'false rejections');
   // with numbers and separators, as players actually type them
-  for (const n of ['Wanjiru_07', 'otieno-ke', 'Kakuma254', 'Dickson_22', 'Hassan_ali', 'Titus99']) assert.ok(!rejected(n), n);
+  for (const n of ['Wanjiru_K', 'Bob_K', 'Wanjiru_07', 'otieno-ke', 'Kakuma254', 'Dickson_22', 'Hassan_ali', 'Titus99']) assert.ok(!rejected(n), n);
+});
+
+test('Swahili blocklist (docs/swahili_profanity_blocklist_and_moderation_strategy.md)', () => {
+  // strict roots, anywhere, with conjugations and leetspeak
+  for (const n of ['t0mb4', 'kutomba', 'nitakutomba', 'tombwa_22', 'd1ny4', 'dinywa', 'ms3ng3', 'xMalayax', 'k4h4b4', 'pumb4vu_ke',
+    'mpuuz1', 'mburulaa', 'kuma_ya_mama', 'kuma_mama', 'kuma_yako', 'toooomba']) assert.ok(rejected(n), `should reject ${n}`);
+  // whole-word terms, including camelCase word breaks
+  for (const n of ['kuma', 'quma', 'mb00', 'Shoga_22', 'b4sh4', 'mj1ng4', 'jinga', 'zuzu', 'm4t4k0', 'tako', 'ny0ny0s', 'f1s1',
+    'ny4n1', 'mbw4', 'MbwaKali', 'Fisi_Mkali', 'k4f1r1', 'mch4w1', 'NyaniBoy']) assert.ok(rejected(n), `should reject ${n}`);
+  // look-alikes the doc warns about
+  for (const n of ['Kumasi', 'Akuma', 'Kumamoto', 'Mbooni', 'Mbwana', 'Mbwana_22', 'Jinja', 'Himalaya', 'Malayalam', 'Kakuma',
+    'Tom_Baraka', 'TomBarasa', 'Tom_Bakari', 'Tombe', 'Odinga']) assert.ok(!rejected(n), `should allow ${n}`);
+  assert.ok(checkName('Tom_Baraka').flagged, 'Tom + Ba... names go to review');
+  assert.ok(rejected('tom_ba') && rejected('Tom_bana'), 'but not short evasions');
 });
 
 test('mild insults and animal nicknames are allowed but flagged', () => {
-  for (const n of ['Fisi_Mkali', 'MbwaKali', 'Nyani22', 'stupid_dog', 'Mjinga']) {
+  for (const n of ['stupid_dog', 'Punda22', 'Kichaa_K', 'mbwakali']) {
     const r = checkName(n);
     assert.ok(r.ok && r.flagged, n);
   }
