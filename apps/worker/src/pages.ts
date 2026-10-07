@@ -106,7 +106,7 @@ export async function threadLanding(req: Request, env: Env, url: URL): Promise<R
   if (!def) return shell;
   const when = def.day ? new Date(def.day + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '';
   const name = def.kind === 'daily' ? `Today's Thread · ${when}` : 'An anytime thread';
-  let title = `${name} on Chezable`;
+  let title = name;
   const from = url.searchParams.get('from') || '';
   if (/^\ds[0-9a-z]{6}$/.test(from)) {
     const c = await env.DB.prepare("SELECT p.handle FROM challenges c LEFT JOIN players p ON p.id = c.creator_id WHERE c.id = ? AND c.kind = 'thread'").bind(from).first<any>();
