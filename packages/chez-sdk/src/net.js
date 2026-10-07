@@ -121,31 +121,52 @@ export async function api(method, path, body, opts = {}) {
 }
 
 /* ---------------- offline queue ---------------- */
-export function enqueue(path, body) {
+// Items are { id, method, path, body, at }, sent in order. A result is written here *before* it is sent
+// (sendQueued), so leaving the page mid-request, or going offline, never loses it: the next page load sends it.
+export function enqueue(path, body, method = 'POST') {
   const q = store.get('queue', []);
-  q.push({ path, body, at: Date.now() });
+  const item = { id: uuid().slice(0, 13), method, path, body, at: Date.now() };
+  q.push(item);
   store.set('queue', q.slice(-200));
+  return item.id;
 }
+const dequeue = (id) => store.set('queue', store.get('queue', []).filter((x) => x.id !== id));
+const inFlight = new Set();
+
+/** Persist, then send. Resolves with the reply; rejects (offline, 5xx) leaving the item queued; 4xx drops it. */
+export async function sendQueued(method, path, body, opts = {}) {
+  const id = enqueue(path, body, method);
+  inFlight.add(id);
+  try {
+    const res = await api(method, path, body, opts);
+    dequeue(id);
+    return res;
+  } catch (e) {
+    if (!e.offline && e.status >= 400 && e.status < 500) dequeue(id);
+    throw e;
+  } finally { inFlight.delete(id); }
+}
+
 let flushing = null;
 export function flush() {
   if (flushing) return flushing;
   flushing = (async () => {
-    let q = store.get('queue', []);
     let sent = 0;
-    while (q.length) {
+    for (;;) {
+      const q = store.get('queue', []);
+      if (!q.length) break;
       const item = q[0];
+      if (item.id && inFlight.has(item.id)) break; // this page is sending it right now; keep the order
       try {
-        const res = await api('POST', item.path, item.body);
+        const res = await api(item.method || 'POST', item.path, item.body);
         if (item.path === '/run/finish' && res) emit('synced', res);
         sent++;
       } catch (e) {
         if (e.offline) break;
         if (!(e.status >= 400 && e.status < 500)) break; // server trouble: keep it for later
-        // 4xx: the item is invalid (expired, duplicate); drop it
+        // 4xx: the item is invalid (expired, duplicate, already sent); drop it
       }
-      q = store.get('queue', []);
-      q.shift();
-      store.set('queue', q);
+      store.set('queue', store.get('queue', []).filter((x) => (item.id ? x.id !== item.id : !(x.at === item.at && x.path === item.path))));
     }
     if (sent) refreshMe().catch(() => {});
   })().finally(() => { flushing = null; });
@@ -185,12 +206,14 @@ export function track(name, props = {}, game = null) {
   buffer.push({ name, game, props, ts: Date.now(), session: sessionId() });
   // also to Google Analytics (GA4), so the events show in a dashboard straight away (spec v1 §A5).
   // GA event names can't contain dots; only flat values are sent, and never names, IDs or typed text.
+  // GA does real work on every event: hand it over when the page is idle, never in the middle of drawing a screen
   try {
     if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
       const flat = {};
       for (const [k, v] of Object.entries(props || {})) if (v == null || ['string', 'number', 'boolean'].includes(typeof v)) flat[k] = v;
       if (game && flat.game == null) flat.game = game;
-      window.gtag('event', name.replace(/[^a-zA-Z0-9_]/g, '_'), flat);
+      const send = () => { try { window.gtag('event', name.replace(/[^a-zA-Z0-9_]/g, '_'), flat); } catch (e) {} };
+      'requestIdleCallback' in window ? requestIdleCallback(send, { timeout: 3000 }) : setTimeout(send, 50);
     }
   } catch (e) {}
   if (buffer.length >= 20) flushEvents();
@@ -204,6 +227,8 @@ export function flushEvents(keepalive = false) {
     if (e.offline || !(e.status >= 400 && e.status < 500)) enqueue('/events', { events });
   });
 }
+/** Send buffered events now (before leaving the page). */
+export const flushEventsNow = () => flushEvents(true);
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushEvents(true); });
   addEventListener('online', () => flush());

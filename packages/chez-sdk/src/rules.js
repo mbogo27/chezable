@@ -12,6 +12,7 @@ export const AWARDS = {
   'challenge.accepted_by_new_player': { xp: 30, coins: 20, perDay: 5 },
   'native.played':                    { xp: 10, coins: 5,  oncePerGame: true },
   'challenge.sent':                   { xp: 2,  coins: 0,  perDay: 10 },
+  'thread.completed':                 { xp: 10, coins: 5,  perDay: 10 }, // spec 2 §5.3 bonus (tune later)
 };
 
 /**

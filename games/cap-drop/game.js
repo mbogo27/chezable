@@ -4,7 +4,7 @@
 // Also the branded-minigame template (§12.1): /b/<brand>/cap-drop/ loads skins/<brand>.json.
 import M from './stage.json';
 import { neighbors, solve, cfgFor, DAILY_CFG, generate, levelSeed, starsFor, centreOf } from './logic.js';
-import { reduced } from '../_lib/kit.js';
+import { reduced, covered } from '../_lib/kit.js';
 
 const C = window.Chez;
 const t = (k, v) => C.t(k, v);
@@ -48,6 +48,8 @@ C.onPlay(async (ctx) => {
   cv.focus({ preventScroll: true });
 });
 C.onQuit(() => { S = null; });
+// spec 2 §4 forceEnd: time's up before the gold cap dropped: not solved (0 stars)
+C.onForceEnd(() => { if (S && S.playing && !drop) unsolved(); });
 function loadBoard() {
   const N = P.n * P.n;
   cells = new Array(N).fill(-1); pieces = [];
@@ -131,26 +133,33 @@ async function win() {
   const secs = Math.round((performance.now() - S.t0) / 100) / 10;
   const stars = starsFor(S.moves, P.par);
   sfx.win();
-  const starTxt = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
-  const solvedTxt = t('kf_solved', { m: S.moves, p: P.par });
+  const solvedTxt = S.moves <= P.par ? t('kf_perfect', { p: P.par }) : t('kf_solved', { m: S.moves, p: P.par });
+  const label = S.moves === 1 ? t('kf_one_move') : t('kf_moves', { n: S.moves });
+  const level = run.challenge && run.challenge.payload && run.challenge.payload.level;
   if (S.mode === 'solo') {
     const prev = C.store.get('stars:cap-drop', {});
     if ((prev[S.level] || 0) < stars) { prev[S.level] = stars; C.store.set('stars:cap-drop', prev); }
     C.store.set('level:cap-drop', S.level + 1);
     await run.finish({
-      score: S.level, tiebreak: secs, detail: { level: S.level, moves: S.moves, par: P.par, stars, secs },
-      display: run.skin && run.skin.copy && run.skin.copy.win ? run.skin.copy.win : `${t('kf_level', { n: S.level })} ${starTxt}`,
-      sub: solvedTxt, againLabel: t('kf_next', { n: S.level + 1 }),
-      share: { line: t('kf_line_lvl', { n: S.level }) },
+      score: S.level, tiebreak: secs, detail: { level: S.level, moves: S.moves, par: P.par, secs, solved: true },
+      scoreLabel: run.skin && run.skin.copy && run.skin.copy.win ? run.skin.copy.win : label, bestPossible: P.par,
+      sub: `${t('kf_level', { n: S.level })} · ${solvedTxt}`,
     });
   } else {
-    const day = new Date().toLocaleDateString('en-KE', { day: 'numeric', month: 'short' });
     await run.finish({
-      score: S.moves, tiebreak: secs, detail: { moves: S.moves, par: P.par, stars, secs },
-      sub: `${starTxt} ${solvedTxt}`,
-      share: { line: t('kf_line', { m: S.moves, p: P.par }), grid: run.mode === 'daily' ? `${starTxt} ${S.moves}/${P.par}` : undefined, head: `Cap Drop · ${day}` },
+      score: S.moves, tiebreak: secs, detail: { moves: S.moves, par: P.par, secs, solved: true, level: level || undefined },
+      scoreLabel: label, bestPossible: P.par, sub: solvedTxt,
     });
   }
+}
+/** Not solved in time: 0 stars. A solo run scores the last level passed; a seeded board scores the worst. */
+async function unsolved() {
+  S.playing = false;
+  const secs = Math.round((performance.now() - S.t0) / 100) / 10;
+  const level = run.challenge && run.challenge.payload && run.challenge.payload.level;
+  await run.finish(S.mode === 'solo'
+    ? { score: Math.max(0, S.level - 1), tiebreak: secs, detail: { level: S.level, moves: S.moves, par: P.par, secs, solved: false }, scoreLabel: t('kf_unsolved'), sub: t('kf_level', { n: S.level }) }
+    : { score: 999, tiebreak: secs, detail: { moves: S.moves, par: P.par, secs, solved: false, level: level || undefined }, scoreLabel: t('kf_unsolved'), sub: t('kf_unsolved_sub', { p: P.par }) });
 }
 
 /* ---------------- input ---------------- */
@@ -269,6 +278,7 @@ window.__chezAuto = () => {
 
 let last = performance.now();
 function frame(now) {
+  if (covered()) { last = now; requestAnimationFrame(frame); return; }
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
   if (P && S) {

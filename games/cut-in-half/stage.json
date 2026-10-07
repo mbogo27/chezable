@@ -9,6 +9,9 @@
   "rule": {
     "en": "Stop the sliding saw at exactly 50 cm. Three cuts; the lowest total wins."
   },
+  "tagline": {
+    "en": "Stop the saw on the line."
+  },
   "howto": {
     "en": [
       "The saw slides along a 100 cm plank.",
@@ -74,8 +77,8 @@
     "payload": "P03"
   },
   "card": {
-    "color": "#E9B978",
-    "icon": "🪚"
+    "color": "#FFD54A",
+    "icon": "/icons/games/cut-in-half.svg"
   },
   "strings": {
     "en": {
@@ -92,7 +95,19 @@
       "kn_r3": "Wobbly",
       "kn_r4": "Way off",
       "kn_line": "I cut a 100 cm plank in half three times and ended up {n} cm off",
-      "kn_cuts": "Cuts: {list}"
+      "kn_cuts": "Cuts: {list}",
+      "kn_timeup": "Time ran out."
     }
-  }
+  },
+  "stars": {
+    "kind": "asc",
+    "t": [
+      30,
+      15,
+      6
+    ],
+    "goodCut": 5
+  },
+  "typicalSec": 30,
+  "maxDurationSec": 60
 }

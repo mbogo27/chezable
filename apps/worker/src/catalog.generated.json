@@ -8,6 +8,10 @@
    "rule": {
     "en": "Stop the sliding saw at exactly 50 cm. Three cuts; the lowest total wins."
    },
+   "tagline": {
+    "en": "Stop the saw on the line."
+   },
+   "featured": true,
    "modes": [
     "solo",
     "h2h",
@@ -46,7 +50,21 @@
      }
     }
    },
-   "assist": true
+   "assist": true,
+   "stars": {
+    "kind": "asc",
+    "t": [
+     30,
+     15,
+     6
+    ],
+    "goodCut": 5
+   },
+   "typicalSec": 30,
+   "card": {
+    "color": "#FFD54A",
+    "icon": "/icons/games/cut-in-half.svg"
+   }
   },
   {
    "id": "nyanya-jetpack",
@@ -56,6 +74,10 @@
    "rule": {
     "en": "Hold to fire the jetpack and keep the tomato off the spikes."
    },
+   "tagline": {
+    "en": "Fly the tomato past the spikes."
+   },
+   "featured": true,
    "modes": [
     "solo",
     "daily",
@@ -95,7 +117,20 @@
      }
     }
    },
-   "assist": true
+   "assist": true,
+   "stars": {
+    "kind": "desc",
+    "t": [
+     10,
+     40,
+     120
+    ]
+   },
+   "typicalSec": 45,
+   "card": {
+    "color": "#FF9E80",
+    "icon": "/icons/games/nyanya-jetpack.svg"
+   }
   },
   {
    "id": "cap-drop",
@@ -105,6 +140,10 @@
    "rule": {
     "en": "Slide the caps until the gold cap drops down the chute into the glass."
    },
+   "tagline": {
+    "en": "Slide the caps into place."
+   },
+   "featured": true,
    "modes": [
     "solo",
     "daily",
@@ -130,6 +169,17 @@
       }
      },
      "h2h": {
+      "order": "asc",
+      "min": 1,
+      "max": 999,
+      "template": {
+       "en": "{s} moves"
+      },
+      "templateOne": {
+       "en": "1 move"
+      }
+     },
+     "thread": {
       "order": "asc",
       "min": 1,
       "max": 999,
@@ -166,7 +216,16 @@
      }
     }
    },
-   "assist": false
+   "assist": false,
+   "stars": {
+    "kind": "par",
+    "near": 2
+   },
+   "typicalSec": 45,
+   "card": {
+    "color": "#8ED8CC",
+    "icon": "/icons/games/cap-drop.svg"
+   }
   },
   {
    "id": "arrow-puzzle",
@@ -176,6 +235,10 @@
    "rule": {
     "en": "Tap arrows to slide them off the board, without letting one hit another."
    },
+   "tagline": {
+    "en": "Slide every arrow out of the grid."
+   },
+   "featured": true,
    "modes": [
     "solo",
     "daily",
@@ -201,6 +264,17 @@
       }
      },
      "h2h": {
+      "order": "asc",
+      "min": 0,
+      "max": 999,
+      "template": {
+       "en": "{s} bumps"
+      },
+      "templateOne": {
+       "en": "1 bump"
+      }
+     },
+     "thread": {
       "order": "asc",
       "min": 0,
       "max": 999,
@@ -237,7 +311,20 @@
      }
     }
    },
-   "assist": false
+   "assist": false,
+   "stars": {
+    "kind": "bumps",
+    "t": [
+     99,
+     1,
+     0
+    ]
+   },
+   "typicalSec": 45,
+   "card": {
+    "color": "#BDB0FF",
+    "icon": "/icons/games/arrow-puzzle.svg"
+   }
   },
   {
    "id": "apple-slicer",
@@ -292,7 +379,11 @@
      }
     }
    },
-   "assist": true
+   "assist": true,
+   "card": {
+    "color": "#78C832",
+    "icon": "🍏"
+   }
   },
   {
    "id": "hoop-shot",
@@ -342,7 +433,11 @@
      }
     }
    },
-   "assist": true
+   "assist": true,
+   "card": {
+    "color": "#FF7A2E",
+    "icon": "🏀"
+   }
   },
   {
    "id": "lemon-squeeze",
@@ -391,7 +486,11 @@
      }
     }
    },
-   "assist": true
+   "assist": true,
+   "card": {
+    "color": "#FFD21F",
+    "icon": "🍋"
+   }
   },
   {
    "id": "water-bugs",
@@ -428,7 +527,11 @@
     }
    },
    "assist": false,
-   "turnBased": true
+   "turnBased": true,
+   "card": {
+    "color": "#2F8FD8",
+    "icon": "💧"
+   }
   }
  ]
 }

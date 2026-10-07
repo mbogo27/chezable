@@ -1,67 +1,89 @@
-// Sharing (spec v1 §B2): exactly three options, WhatsApp first, then Facebook and Copy link.
-// No native share sheet in v1 (it shows every app and defeats the limited-options goal).
+// Sharing (spec 2 §1.2). The link is made on the device before the tap, so a tap never waits for the network:
+// the share chain runs inside the click handler, keeping the tap's user activation (Android Chrome refuses
+// navigator.share() after an await on the network).
+//   1. navigator.share({ title, text, url })   2. open wa.me with the text   3. copy the link ("Link copied")
 import { t } from './i18n.js';
-import { sheet, toast, esc } from './ui.js';
+import { toast, esc, sheet } from './ui.js';
 import { track } from './net.js';
 
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)]; // cosmetic: which wording, not gameplay
+/** "I did <game> in <result>. Can you beat me?" plus the link on its own line. */
+export const challengeText = (gameTitle, result) => t('share_challenge_text', { game: gameTitle, result });
 
-/** Challenge text by end-screen state, a few variants each so messages don't all read the same. */
-export function challengeText({ variant = 'default', score, gameTitle, url, them, theirScore, rank }) {
-  const v = {
-    default: [`I scored ${score} in ${gameTitle} on Chezable. Beat me: ${url}`, `${score} in ${gameTitle}. Think you can beat that? ${url}`, `My score in ${gameTitle}: ${score}. Your turn: ${url}`],
-    record: [`New personal best: ${score} in ${gameTitle} on Chezable. Beat me: ${url}`, `Just set my best in ${gameTitle}: ${score}. Can you top it? ${url}`],
-    rank: [`I'm #${rank} this week in ${gameTitle} on Chezable with ${score}. Beat me: ${url}`, `#${rank} in ${gameTitle} this week (${score}). Come and knock me off: ${url}`],
-    back: [`${them}, I beat your ${theirScore} with ${score} in ${gameTitle}. Your move: ${url}`, `${score} beats ${theirScore}, ${them}. Rematch? ${url}`],
-  };
-  return pick(v[variant] || v.default);
+function copyFallback(url) {
+  // no clipboard permission: show the link selected, so it can be copied by hand
+  const s = sheet(`<h2 class="sheet-title">${esc(t('share_copy_manual'))}</h2>
+    <label class="field"><span class="sr-only">${esc(t('share_link'))}</span><input readonly value="${esc(url)}" data-link></label>
+    <button class="btn wide" data-x>${esc(t('close'))}</button>`, { label: t('share_copy_manual') });
+  const i = s.el.querySelector('[data-link]');
+  setTimeout(() => { i.focus(); i.select(); }, 40);
+  s.el.querySelector('[data-x]').onclick = () => s.close();
 }
 
-/** The three-option sheet. Returns when it closes. */
-export function shareOptions({ text, url, game = null, state = null }) {
-  const s = sheet(`
-    <h2 style="font-size:24px">${esc(t('share_title'))}</h2>
-    <p class="muted" style="word-break:break-word">${esc(text)}</p>
-    <div class="stack">
-      <a class="btn wa wide" data-via="whatsapp" href="https://wa.me/?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">${esc(t('share_whatsapp'))}</a>
-      <a class="btn alt wide" data-via="facebook" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}" target="_blank" rel="noopener">${esc(t('share_facebook'))}</a>
-      <button class="btn alt wide" data-via="copy">${esc(t('share_copy'))}</button>
-      <div class="copy-fallback" hidden><label class="field"><span>${esc(t('share_copy_manual'))}</span><input readonly value="${esc(url)}"></label></div>
-      <button class="btn alt wide" data-via="close">${esc(t('close'))}</button>
-    </div>`, { label: t('share_title') });
-  s.el.addEventListener('click', async (e) => {
-    const b = e.target.closest('[data-via]');
-    if (!b) return;
-    const via = b.dataset.via;
-    if (via === 'close') return s.close(false);
-    track('share_tap', { channel: via, state_shown: state, game }, game);
-    if (via === 'copy') {
-      e.preventDefault();
-      try {
-        await navigator.clipboard.writeText(url);
-        b.textContent = t('copied_short');
-        toast(t('copied'));
-      } catch (err) {
-        // no clipboard permission: show the link selected so it can be copied by hand
-        const fb = s.el.querySelector('.copy-fallback');
-        fb.hidden = false;
-        const input = fb.querySelector('input');
-        input.focus(); input.select();
-      }
-      return;
-    }
-    setTimeout(() => s.close(true), 300);
+/**
+ * Run the share chain. Call it synchronously from the click handler, with no await before it.
+ * done(state) is called with 'shared' | 'copied' | 'idle' (cancelled) | 'failed'.
+ */
+export function shareNow({ title = 'Chezable', text, url, surface = 'end_screen', game = null }, done = () => {}) {
+  const full = url && !text.includes(url) ? `${text}\n${url}` : text;
+  const props = (method, extra = {}) => ({ surface, method, game, ...extra });
+  if (typeof navigator !== 'undefined' && navigator.share) {
+    track('share_tapped', props('native'));
+    navigator.share(url ? { title, text, url } : { title, text }).then(() => {
+      track('share_completed', props('native')); done('shared');
+    }).catch((e) => {
+      if (e && e.name === 'AbortError') { track('share_failed', props('native', { reason: 'cancelled' })); done('idle'); return; }
+      track('share_failed', props('native', { reason: (e && e.name) || 'error' }));
+      // the share sheet refused (no activation, not allowed): fall through to WhatsApp, then the clipboard
+      whatsappOrCopy(full, url, props, done, false);
+    });
+    return;
+  }
+  whatsappOrCopy(full, url, props, done, true);
+}
+function whatsappOrCopy(full, url, props, done, tapped) {
+  if (tapped) track('share_tapped', props('whatsapp'));
+  let win = null;
+  try { win = window.open('https://wa.me/?text=' + encodeURIComponent(full), '_blank'); } catch (e) { win = null; }
+  if (win) {
+    try { win.opener = null; } catch (e) {}
+    track('share_completed', props('whatsapp'));
+    return done('shared');
+  }
+  // pop-up blocked: copy the link instead
+  copyLink(url || full, props, done);
+}
+function copyLink(text, props, done) {
+  track('share_tapped', props('clipboard'));
+  const ok = () => { track('share_completed', props('clipboard')); toast(t('copied')); done('copied'); };
+  const fail = () => { track('share_failed', props('clipboard', { reason: 'denied' })); copyFallback(text); done('failed'); };
+  try { navigator.clipboard.writeText(text).then(ok, fail); } catch (e) { fail(); }
+}
+/** Copy a link straight away (the "copy" path on its own). */
+export function copyNow(url, surface = 'end_screen', game = null) {
+  copyLink(url, (method, extra = {}) => ({ surface, method, game, ...extra }), () => {});
+}
+
+/**
+ * A share button: idle label → "Shared" / "Link copied" for 2 seconds → idle again. No state lasts over 3 s.
+ * payload() is called on the tap and must return synchronously { title, text, url, game }.
+ */
+export function bindShareButton(btn, payload, surface) {
+  const idle = btn.textContent;
+  let timer = null;
+  btn.addEventListener('click', () => {
+    const p = payload();
+    if (!p) return;
+    shareNow({ ...p, surface }, (state) => {
+      clearTimeout(timer);
+      if (state === 'shared' || state === 'copied') {
+        btn.textContent = state === 'shared' ? t('shared_short') : t('copied_short');
+        timer = setTimeout(() => { btn.textContent = idle; }, 2000);
+      } else btn.textContent = idle;
+    });
   });
-  return s.done;
 }
 
-/** End-screen share: the right wording for the state, then the three options. */
-export function shareChallenge(o) {
-  return shareOptions({ text: challengeText({ ...o, gameTitle: o.gameTitle }), url: o.url, game: o.game, state: o.state });
-}
-
-/** Back-compat for shell pages: share any text + link with the same three options. */
-export function share({ text, url, game = null }) {
-  const full = url && !text.includes(url) ? `${text} ${url}` : text;
-  return shareOptions({ text: full, url: url || '', game });
+/** Back-compat for shell pages: share any text and link the same way. */
+export function share({ text, url, game = null, surface = 'page' }) {
+  shareNow({ text, url, game, surface });
 }

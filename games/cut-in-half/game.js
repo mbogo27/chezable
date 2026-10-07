@@ -135,12 +135,14 @@ function startAiming() {
   startEngine();
   loop.play();
 }
+let autoPilot = false;
 function step(dt, tick) {
   const s = S;
   if (!s || !s.aiming) return;
   s.time += dt; s.aimTime += dt;
   s.phase += dt * s.speed * (1 + T.sway * Math.sin(s.time * 0.9));
   s.pos = 0.5 + T.amp * Math.sin(s.phase);
+  if (autoPilot && s.aimTime > 0.3 && Math.abs(s.pos - 0.5) < 0.004) s.pendingCut = true;
   if (s.pendingCut) { s.pendingCut = false; if (s.aimTime > 0.2) cut(tick); }
 }
 function cut(tick) {
@@ -190,8 +192,8 @@ async function finish() {
   const list = S.cuts.map((c) => `${fmt(c.left)}/${fmt(c.right)}`).join(', ');
   await run.finish({
     score: tot, tiebreak: Math.min(...S.cuts.map((c) => c.err)),
-    detail: { cuts: S.cuts },
-    sub: t('kn_cuts', { list }),
+    detail: { cuts: S.cuts, timeUp: S.timeUp ? 1 : undefined },
+    sub: (S.timeUp ? t('kn_timeup') + ' ' : '') + t('kn_cuts', { list }),
     share: { line: t('kn_line', { n: fmt(tot) }) },
   });
 }
@@ -208,6 +210,14 @@ C.onPlay(async (ctx) => {
 C.onPause(() => { if (S && S.aiming) { loop.halt(); stopEngine(); } });
 C.onResume(() => { if (S && S.aiming) { loop.play(); startEngine(); } });
 C.onQuit(() => { S = null; stopEngine(); loop.halt(); panel.innerHTML = ''; resetPlank(); });
+// spec 2 §4 forceEnd: time's up; a cut not made counts as the worst cut (50 cm off)
+C.onForceEnd(() => {
+  if (!S || view === 'done') return;
+  S.aiming = false; loop.halt(); stopEngine();
+  while (S.cuts.length < ROUNDS) S.cuts.push({ left: 0, right: 100, err: 50, missed: true });
+  S.timeUp = true;
+  finish();
+});
 
 function tryCut() { if (S && S.aiming) { C.audio.ensure(); S.pendingCut = true; } }
 board.addEventListener('pointerdown', (e) => { e.preventDefault(); tryCut(); });
@@ -239,5 +249,7 @@ function render(now, alpha, dt) {
   if (!S && view === 'idle') positionSaw(0.5 + 0.3 * Math.sin(now / 900), 0);
 }
 const loop = fixedLoop({ step, render, STEP: 1 / 120 });
+// test hook for scripts/browser.mjs: cut near the middle, then take the next cut
+window.__chezAuto = () => { autoPilot = true; if (view === 'result') next(); };
 loop.start();
 layout();

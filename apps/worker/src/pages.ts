@@ -5,6 +5,8 @@
 import type { Env } from './util';
 import { HttpError } from './util';
 import { renderCard, hasCard } from './og';
+import { isChallengeId, decodeChallenge } from '../../../packages/chez-sdk/src/codes.js';
+import { threadIdFromPath, threadDef } from '../../../packages/chez-sdk/src/threads.js';
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
@@ -17,19 +19,23 @@ export function fmt(g: any, score: number | null): string {
   return (tpl.en || '{s}').replace('{s}', s);
 }
 
-async function loadForPreview(env: Env, code: string) {
-  return env.DB.prepare(
+async function loadForPreview(env: Env, code: string, games: Record<string, any>) {
+  const row = await env.DB.prepare(
     `SELECT c.kind, c.game, c.creator_score, p.handle, COALESCE(p.status, 'ok') AS status, COALESCE(r.hidden, 0) AS hidden, COALESCE(r.flagged, 0) AS flagged
      FROM challenges c LEFT JOIN players p ON p.id = c.creator_id LEFT JOIN runs r ON r.id = c.creator_run_id WHERE c.id = ?`
   ).bind(code).first<any>();
+  if (row) return row;
+  // a device-made code its creator hasn't registered yet: the code itself carries the game and score
+  const d = decodeChallenge(code, Object.keys(games));
+  return d && d.kind === 'beat' ? { kind: 'beat', game: d.game, creator_score: d.score, handle: null, status: 'ok', hidden: 0, flagged: 0 } : null;
 }
 const isHidden = (c: any) => c.status === 'hidden' || c.hidden === 1 || c.flagged === 1;
 
 export async function challengeLanding(req: Request, env: Env, url: URL, games: Record<string, any>): Promise<Response> {
   const id = url.pathname.split('/')[2] || '';
   const shell = await env.ASSETS.fetch(new Request(new URL('/index.html', url.origin).toString(), { headers: req.headers }));
-  if (!/^[A-Za-z0-9]{6,12}$/.test(id)) return shell;
-  const c = await loadForPreview(env, id);
+  if (!isChallengeId(id)) return shell;
+  const c = await loadForPreview(env, id, games);
   if (!c || !games[c.game]) return shell;
   const g = games[c.game];
   const gameName = g.title.en;
@@ -50,6 +56,12 @@ export async function challengeLanding(req: Request, env: Env, url: URL, games: 
     desc = `${gameName} on Chezable. ${g.rule.en}`;
     if (hasCard(c.game)) image = `${url.origin}/og/c/${id}.png`;
   }
+  return withMeta(shell, { title, desc, image, url: `${url.origin}/c/${id}`, card: true });
+}
+
+/** The app shell with a page's own title, description and preview image in the initial HTML. */
+function withMeta(shell: Response, m: { title: string; desc: string; image: string; url: string; card?: boolean }): Response {
+  const { title, desc, image } = m;
   const set = (attr: string) => ({ element(el: Element) { el.setAttribute('content', attr); } });
   const res = new HTMLRewriter()
     .on('title', { element(el) { el.setInnerContent(`${esc(title)} · Chezable`, { html: true }); } })
@@ -57,11 +69,11 @@ export async function challengeLanding(req: Request, env: Env, url: URL, games: 
     .on('meta[property="og:title"]', set(title))
     .on('meta[property="og:description"]', set(desc))
     .on('meta[property="og:image"]', set(image))
-    .on('meta[property="og:url"]', set(`${url.origin}/c/${id}`))
+    .on('meta[property="og:url"]', set(m.url))
     .on('meta[name="twitter:title"]', set(title))
     .on('meta[name="twitter:description"]', set(desc))
     .on('meta[name="twitter:image"]', set(image))
-    .on('head', { element(el) { el.append(`<meta property="og:image:width" content="600"><meta property="og:image:height" content="315">`, { html: true }); } })
+    .on('head', { element(el) { if (m.card) el.append(`<meta property="og:image:width" content="600"><meta property="og:image:height" content="315">`, { html: true }); } })
     .transform(shell);
   const out = new Response(res.body, res);
   out.headers.set('Cache-Control', 'no-store');
@@ -71,12 +83,12 @@ export async function challengeLanding(req: Request, env: Env, url: URL, games: 
 
 /** /og/c/<code>.png: drawn once per code per location, then served from the edge cache. */
 export async function challengeCard(req: Request, env: Env, url: URL, games: Record<string, any>, ctx: ExecutionContext): Promise<Response> {
-  const m = url.pathname.match(/^\/og\/c\/([A-Za-z0-9]{6,12})\.png$/);
-  if (!m) throw new HttpError(404, 'not_found');
+  const m = url.pathname.match(/^\/og\/c\/([A-Za-z0-9._~-]{6,140})\.png$/);
+  if (!m || !isChallengeId(m[1])) throw new HttpError(404, 'not_found');
   const cache = caches.default;
   const hit = await cache.match(req);
   if (hit) return hit;
-  const c = await loadForPreview(env, m[1]);
+  const c = await loadForPreview(env, m[1], games);
   if (!c || !games[c.game] || c.kind !== 'beat' || isHidden(c) || !hasCard(c.game)) {
     return Response.redirect(`${url.origin}/og/${c && games[c.game] ? c.game : 'chezable'}.png`, 302);
   }
@@ -84,6 +96,23 @@ export async function challengeCard(req: Request, env: Env, url: URL, games: Rec
   const res = new Response(png, { headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' } });
   ctx.waitUntil(cache.put(req, res.clone()));
   return res;
+}
+
+/** /t/<date> and /t/anytime-<id>: the app shell with the thread's preview tags (spec 2 §5.6). */
+export async function threadLanding(req: Request, env: Env, url: URL): Promise<Response> {
+  const shell = await env.ASSETS.fetch(new Request(new URL('/index.html', url.origin).toString(), { headers: req.headers }));
+  const id = threadIdFromPath(url.pathname.split('/')[2] || '');
+  const def = id ? threadDef(id) : null;
+  if (!def) return shell;
+  const when = def.day ? new Date(def.day + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '';
+  const name = def.kind === 'daily' ? `Today's Thread · ${when}` : 'An anytime thread';
+  let title = `${name} on Chezable`;
+  const from = url.searchParams.get('from') || '';
+  if (/^\ds[0-9a-z]{6}$/.test(from)) {
+    const c = await env.DB.prepare("SELECT p.handle FROM challenges c LEFT JOIN players p ON p.id = c.creator_id WHERE c.id = ? AND c.kind = 'thread'").bind(from).first<any>();
+    title = `${(c && c.handle) || 'A friend'} got ${from[0]}/9 stars in ${name}. Can you beat it?`;
+  }
+  return withMeta(shell, { title, desc: 'Three games, one run. Lives and coins carry over.', image: `${url.origin}/og/chezable.png`, url: `${url.origin}${url.pathname}${url.search}` });
 }
 
 // Old Swahili game slugs, for branded links made before the rename

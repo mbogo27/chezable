@@ -3,7 +3,7 @@
 // Native "Giuthi arrows": double-headed arrows reverse instead of costing a heart.
 import M from './stage.json';
 import { cfgFor, DAILY_CFG, generate, tapOutcome, blocker, removeArrow, levelSeed } from './logic.js';
-import { reduced } from '../_lib/kit.js';
+import { reduced, covered } from '../_lib/kit.js';
 
 const C = window.Chez;
 const t = (k, v) => C.t(k, v);
@@ -40,6 +40,8 @@ C.onPlay(async (ctx) => {
   cv.focus({ preventScroll: true });
 });
 C.onQuit(() => { S = null; L = null; });
+// spec 2 §4 forceEnd: time's up before the board was cleared: not cleared (0 stars)
+C.onForceEnd(() => { if (S && S.playing) uncleared(t('tk_timeup')); });
 function loadBoard() {
   L = generate(S.seed, S.cfg, S.native);
   for (const a of L.arrows) { a.state = 'idle'; a.s = 0; a.gone = false; }
@@ -116,36 +118,36 @@ function loseHeart() {
   if (S.mode !== 'solo') { paintHud(); C.ui.announce(t('tk_bumps', { n: S.bumps })); return; }
   S.hearts = Math.max(0, S.hearts - 1); paintHud();
   C.ui.announce(t('tk_bump', { n: S.hearts }));
-  if (S.hearts === 0) {
-    S.playing = false;
-    setTimeout(() => {
-      const o = C.ui.h(`<div class="overlay show" role="dialog" aria-modal="true"><div class="card"><h2>${C.ui.esc(t('tk_out'))}</h2><p class="muted">${C.ui.esc(t('tk_out_body', { n: S.level }))}</p><button class="btn wide">${C.ui.esc(t('tk_retry'))}</button></div></div>`);
-      document.body.appendChild(o);
-      const btn = o.querySelector('button'); btn.focus();
-      btn.onclick = () => { o.remove(); loadBoard(); cv.focus({ preventScroll: true }); };
-    }, 500);
-  }
+  // out of hearts: the run ends here, not cleared; the end screen offers "Play again" on the same level
+  if (S.hearts === 0) { S.playing = false; setTimeout(() => uncleared(t('tk_out_body', { n: S.level })), 500); }
 }
 async function win() {
   sfx.win();
   const secs = Math.round((performance.now() - S.t0) / 100) / 10;
+  const level = run.challenge && run.challenge.payload && run.challenge.payload.level;
   if (S.mode === 'solo') {
     C.store.set('level:arrow-puzzle', S.level + 1);
     await run.finish({
-      score: S.level, tiebreak: secs, detail: { level: S.level, hearts: S.hearts, bumps: S.bumps, secs },
+      score: S.level, tiebreak: secs, detail: { level: S.level, hearts: S.hearts, bumps: S.bumps, secs, solved: true },
+      scoreLabel: t('tk_level', { n: S.level }),
       sub: S.hearts === TN.hearts ? t('tk_flawless') : t('tk_spare', { n: S.hearts }),
-      againLabel: t('tk_next', { n: S.level + 1 }),
-      share: { line: t('tk_line_lvl', { n: S.level }) },
     });
   } else {
-    const day = new Date().toLocaleDateString('en-KE', { day: 'numeric', month: 'short' });
-    const grid = S.bumps === 0 ? '🟩🟩🟩' : '🟥'.repeat(Math.min(S.bumps, 8));
     await run.finish({
-      score: S.bumps, tiebreak: secs, detail: { bumps: S.bumps, secs, taps: S.taps },
+      score: S.bumps, tiebreak: secs, detail: { bumps: S.bumps, secs, taps: S.taps, solved: true, level: level || undefined },
       sub: t('tk_secs', { s: secs }),
-      share: { line: t('tk_line', { b: S.bumps, s: secs }), grid: run.mode === 'daily' ? `${grid} ${t('tk_secs', { s: secs })}` : undefined, head: `Arrow Puzzle · ${day}` },
     });
   }
+}
+/** Not cleared (out of hearts, or out of time): 0 stars. */
+async function uncleared(why) {
+  if (!S) return;
+  S.playing = false;
+  const secs = Math.round((performance.now() - S.t0) / 100) / 10;
+  const level = run.challenge && run.challenge.payload && run.challenge.payload.level;
+  await run.finish(S.mode === 'solo'
+    ? { score: Math.max(0, S.level - 1), tiebreak: secs, detail: { level: S.level, hearts: S.hearts, bumps: S.bumps, secs, solved: false }, scoreLabel: t('tk_uncleared'), sub: why }
+    : { score: 999, tiebreak: secs, detail: { bumps: S.bumps, secs, taps: S.taps, solved: false, level: level || undefined }, scoreLabel: t('tk_uncleared'), sub: why });
 }
 
 /* ---------------- keyboard focus ---------------- */
@@ -244,6 +246,7 @@ function drawArrow(a, color, width) {
 }
 let last = performance.now();
 function frame(now) {
+  if (covered()) { last = now; requestAnimationFrame(frame); return; }
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
   if (L) {

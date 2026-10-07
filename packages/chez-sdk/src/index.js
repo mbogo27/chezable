@@ -6,13 +6,22 @@ import { prefs, apply as applyPrefs } from './prefs.js';
 import { t, L, addStrings } from './i18n.js';
 import * as net from './net.js';
 import { audio, haptic } from './audio.js';
-import { toast, announce, sheet, esc, h, relAge } from './ui.js';
-import { share } from './share.js';
+import { toast, announce, sheet, esc, h, relAge, closeAllSheets } from './ui.js';
+import { share, shareNow, bindShareButton } from './share.js';
 import * as catalog from './catalog.js';
 import * as rules from './rules.js';
 import * as names from './names.js';
 import { rng, xmur3, mulberry32, shuffle, freshSeed } from '../../rng/rng.js';
-import { stage, onPlay, onPause, onResume, onQuit, pause, resume, isPaused, run, manifest, currentRun, createChallenge, showMenu } from './stage.js';
+import { stage, onPlay, onPause, onResume, onQuit, onForceEnd, pause, resume, isPaused, run, manifest, currentRun, createChallenge, showMenu } from './stage.js';
+import * as header from './header.js';
+import * as screens from './screens.js';
+import * as threads from './threads.js';
+import * as threadState from './thread-state.js';
+import * as threadUi from './thread-ui.js';
+import * as results from './results.js';
+import * as codes from './codes.js';
+import { claimForm, claimSheet } from './claim.js';
+import { prefetchGame } from './prefetch.js';
 import { logoMarkSvg } from './logo.js';
 
 store.migrate();
@@ -21,12 +30,13 @@ applyPrefs();
 const Chez = {
   version: '1.0.0',
   // stage contract
-  stage, onPlay, onPause, onResume, onQuit, pause, resume, isPaused, run, manifest, currentRun, createChallenge, showMenu,
+  stage, onPlay, onPause, onResume, onQuit, onForceEnd, pause, resume, isPaused, run, manifest, currentRun, createChallenge, showMenu,
   // services
   rng, xmur3, mulberry32, shuffle, freshSeed,
   prefs, t, L, addStrings, audio, haptic,
-  ui: { toast, announce, sheet, esc, h, relAge, logoMarkSvg },
-  share,
+  ui: { toast, announce, sheet, esc, h, relAge, logoMarkSvg, closeAllSheets },
+  share, shareNow, bindShareButton,
+  header, screens, threads, threadState, threadUi, results, codes, claimForm, claimSheet, prefetchGame,
   store,
   catalog,
   rules,
@@ -38,6 +48,8 @@ const Chez = {
   me: net.refreshMe,
   cachedMe: net.cachedMe,
   track: net.track,
+  sendQueued: net.sendQueued,
+  applyEarnings: net.applyEarnings,
   flush: net.flush,
   on: net.on,
 };

@@ -75,6 +75,8 @@ export function sheet(html, { label = '', locked = false, onClose } = {}) {
   return api;
 }
 export const anySheetOpen = () => openSheets.length > 0;
+/** Close every open sheet (the shell does this when it changes page). */
+export function closeAllSheets() { for (const x of openSheets.slice().reverse()) x.close(null); }
 
 export function relAge(ts) {
   const s = Math.max(0, (Date.now() - ts) / 1000);

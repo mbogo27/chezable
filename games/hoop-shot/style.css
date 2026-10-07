@@ -1,6 +1,6 @@
-#play{touch-action:none;cursor:pointer;margin:0 10px 12px;border:3px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 6px 0 var(--line);background:linear-gradient(#8fd3f0,#d9f1fb 70%,#c98f55 70%)}
+#play{touch-action:none;cursor:pointer;margin:0 10px 12px;border:3px solid var(--ink);border-radius:18px;overflow:hidden;box-shadow:0 6px 0 var(--ink);background:linear-gradient(#8fd3f0,#d9f1fb 70%,#c98f55 70%)}
 .calls{display:flex;gap:6px;padding:0 10px 8px;flex-wrap:wrap}
-.calls button{flex:1 1 0;min-width:44px;min-height:44px;border:3px solid var(--line);border-radius:12px;background:var(--paper);font:700 15px var(--font-ui);color:var(--ink);cursor:pointer;box-shadow:0 3px 0 var(--line);padding:4px}
+.calls button{flex:1 1 0;min-width:44px;min-height:44px;border:3px solid var(--ink);border-radius:12px;background:var(--paper);font:700 15px var(--font-ui);color:var(--ink);cursor:pointer;box-shadow:0 3px 0 var(--ink);padding:4px}
 .calls button[aria-pressed="true"]{background:var(--tape);color:#1B1D1E}
 .calls button .p{display:block;font-size:11px;color:var(--muted)}
 .calls button[aria-pressed="true"] .p{color:#1B1D1E}

@@ -11,7 +11,7 @@ const PAGES = {
   },
   privacy: {
     en: `<h1 class="page-title">Privacy notice</h1>
-      <p class="muted">Last updated 4 October 2026. Draft for legal review under Kenya's Data Protection Act, 2019.</p>
+      <p class="muted">Last updated 7 October 2026. Draft for legal review under Kenya's Data Protection Act, 2019.</p>
       <h2>What we collect</h2>
       <ul>
         <li><b>A random player ID</b> made on your phone the first time you open Chezable, and a secret that proves requests come from your phone.</li>
@@ -22,6 +22,8 @@ const PAGES = {
       <p>No phone number, email, real name, age, contacts, photos or precise location. No advertising. There is no chat.</p>
       <h2>Google Analytics</h2>
       <p>We use Google Analytics to count visits and see which pages and games are used. It sets cookies and sends Google technical details such as your browser, device type, approximate region and the pages you open. We don't send Google your player name, scores or player ID. Google's privacy policy applies to that data (policies.google.com/privacy). You can block it with your browser's privacy settings or a tracker blocker, and the games keep working.</p>
+      <h2>Google Fonts</h2>
+      <p>The site's two typefaces load from Google Fonts. To send them, Google receives your IP address and browser details; it sets no cookies for this. If the fonts don't load, the site uses your device's own fonts instead.</p>
       <h2>Why</h2>
       <p>To run the games, keep standings fair, link challenges between friends, and learn which games people enjoy (including the Classic vs Native experiment described on the About page). Usage events carry no personal details and their session IDs change every day.</p>
       <h2>Where it lives</h2>

@@ -8,8 +8,8 @@ import { rng } from '../packages/rng/rng.js';
 const rejected = (n) => !checkName(n).ok;
 
 test('format rules', () => {
-  for (const ok of ['Wanjiru', 'Otieno_22', 'kamau-ke', 'Zed']) assert.equal(nameFormatProblem(ok), null, ok);
-  for (const bad of ['ab', 'x'.repeat(17), 'has space', 'dot.name', '_lead', 'trail-', '12345', '0712345678', 'call0722123456', 'me@mail', 'httpbob', 'www_bob', 'bobgmail']) {
+  for (const ok of ['Wanjiru', 'Otieno_22', 'kamau_ke', 'Zed']) assert.equal(nameFormatProblem(ok), null, ok);
+  for (const bad of ['ab', 'x'.repeat(17), 'has space', 'dot.name', 'kamau-ke', '_lead', 'trail-', '12345', '0712345678', 'call0722123456', 'me@mail', 'httpbob', 'www_bob', 'bobgmail']) {
     assert.notEqual(nameFormatProblem(bad), null, bad);
   }
 });
@@ -51,7 +51,7 @@ test('whitelist corpus: real Kenyan names and places pass with zero false reject
   const wrong = corpus.filter((n) => rejected(n));
   assert.deepEqual(wrong, [], 'false rejections');
   // with numbers and separators, as players actually type them
-  for (const n of ['Wanjiru_K', 'Bob_K', 'Wanjiru_07', 'otieno-ke', 'Kakuma254', 'Dickson_22', 'Hassan_ali', 'Titus99']) assert.ok(!rejected(n), n);
+  for (const n of ['Wanjiru_K', 'Bob_K', 'Wanjiru_07', 'otieno_ke', 'Kakuma254', 'Dickson_22', 'Hassan_ali', 'Titus99']) assert.ok(!rejected(n), n);
 });
 
 test('Swahili blocklist (docs/swahili_profanity_blocklist_and_moderation_strategy.md)', () => {

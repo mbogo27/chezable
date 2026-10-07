@@ -110,7 +110,7 @@ async function metrics(DB: D1Database, days: number) {
       JOIN players p ON p.id = x.player_id`).bind(since).first<any>(),
     // sessions with a finished game, and how many of those also had a share tap
     DB.prepare(`SELECT COUNT(DISTINCT g.session_id) AS den,
-      COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM events s WHERE s.name = 'share_tap' AND s.session_id = g.session_id) THEN g.session_id END) AS num
+      COUNT(DISTINCT CASE WHEN EXISTS (SELECT 1 FROM events s WHERE s.name IN ('share_tap', 'share_tapped') AND s.session_id = g.session_id) THEN g.session_id END) AS num
       FROM events g WHERE g.name = 'game_end' AND g.ts >= ? AND g.session_id IS NOT NULL`).bind(since).first<any>(),
     // challenge links opened by someone other than their creator, and how many led to a started game
     DB.prepare(`SELECT COUNT(*) AS den,
@@ -122,7 +122,7 @@ async function metrics(DB: D1Database, days: number) {
     DB.prepare(`SELECT COUNT(DISTINCT e.b_id) AS n FROM edges e JOIN players p ON p.id = e.b_id
       WHERE e.kind = 'recruited' AND p.created_at >= ?`).bind(since).first<any>(),
     // ... per player who tapped a share button
-    DB.prepare(`SELECT COUNT(DISTINCT player_id) AS n FROM events WHERE name = 'share_tap' AND ts >= ?`).bind(since).first<any>(),
+    DB.prepare(`SELECT COUNT(DISTINCT player_id) AS n FROM events WHERE name IN ('share_tap', 'share_tapped') AND ts >= ?`).bind(since).first<any>(),
     ret(1), ret(7),
   ]);
   const m = (key: keyof typeof TARGETS, label: string, def: string, num: number, den: number, ratio = true) =>

@@ -9,6 +9,9 @@
   "rule": {
     "en": "Hold to fire the jetpack and keep the tomato off the spikes."
   },
+  "tagline": {
+    "en": "Fly the tomato past the spikes."
+  },
   "howto": {
     "en": [
       "Hold anywhere, or hold Space, to fire the jetpack. Let go to drop.",
@@ -71,8 +74,8 @@
     "payload": "P04"
   },
   "card": {
-    "color": "#E5322A",
-    "icon": "🍅"
+    "color": "#FF9E80",
+    "icon": "/icons/games/nyanya-jetpack.svg"
   },
   "strings": {
     "en": {
@@ -95,7 +98,18 @@
       "tier_Platinum": "Platinum",
       "tier_Diamond": "Diamond",
       "tier_Champion": "Champion",
-      "tier_Legend": "Legend"
+      "tier_Legend": "Legend",
+      "ny_timeup": "Time! Still flying."
     }
-  }
+  },
+  "stars": {
+    "kind": "desc",
+    "t": [
+      10,
+      40,
+      120
+    ]
+  },
+  "typicalSec": 45,
+  "maxDurationSec": 60
 }

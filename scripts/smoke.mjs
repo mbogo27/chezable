@@ -181,7 +181,7 @@ assert.ok(myRow.me && myRow.me.rank); ok(`your row: #${myRow.me.rank}${myRow.me.
 const anon = new Client('U'); await anon.register();
 await anon.play(game, 10, { tiebreak: 1 });
 const wk = await (await fetch(`${BASE}/api/top/${game}?board=week&mode=solo`)).json();
-assert.ok(wk.rows.every((r) => r.name)); ok('unnamed players stay off public boards');
+assert.ok(wk.rows.some((r) => r.name === null || r.name === undefined)); ok('unclaimed players show on boards as Guest (spec 2 §3.4)');
 const cutRun = await D.play('cut-in-half', 12.3, { tiebreak: 2.1 });
 const dc = await D.ok('POST', '/challenge', { runId: cutRun.start.runId });
 const card = await fetch(`${BASE}/og/c/${dc.id}.png`);
@@ -232,6 +232,112 @@ if (cat.games.find((g) => g.id === 'water-bugs')) {
   const after = await N.ok('POST', `/challenge/${t.id}/move`, { move: m2 });
   assert.equal(after.state.toMove, 1); ok('Water Bugs: second player joins by link and moves');
   assert.equal((await N.call('POST', `/challenge/${t.id}/move`, { move: [0, 8] })).status, 409); ok('Water Bugs: turn order enforced');
+}
+
+/* ---------------- spec 2 ---------------- */
+{
+  const { encodeChallenge, threadChallengeCode } = await import('../packages/chez-sdk/src/codes.js');
+  const { threadDef, turnSeed } = await import('../packages/chez-sdk/src/threads.js');
+  const { nairobiDay } = await import('../packages/chez-sdk/src/rules.js');
+  const A = new Client('A2'); await A.register();
+  const B = new Client('B2'); await B.register();
+  const nmA = `Ann_${uniq}`;
+  await A.ok('POST', '/player/name', { name: nmA });
+
+  // device-made codes: five rapid registrations make one record; the code's game, seed and score must match the run
+  const run = await A.play('cut-in-half', 14.2, { tiebreak: 1.1 });
+  const code = encodeChallenge({ game: 'cut-in-half', seed: run.start.seed, score: 14.2 });
+  const puts = await Promise.all([1, 2, 3, 4, 5].map(() => A.call('PUT', `/challenges/${code}`, { runId: run.start.runId })));
+  assert.ok(puts.every((r) => r.status === 200 || r.status === 201), JSON.stringify(puts.map((r) => r.status)));
+  const listA = await A.ok('GET', '/challenges');
+  assert.equal(listA.waitingThem.filter((c) => c.id === code).length, 1); ok('five rapid taps register one challenge (idempotent PUT)');
+  const bad = encodeChallenge({ game: 'cut-in-half', seed: run.start.seed, score: 3.0 });
+  assert.equal((await A.call('PUT', `/challenges/${bad}`, { runId: run.start.runId })).status, 422); ok('a code whose score does not match the run is refused');
+  const pub = await B.ok('GET', `/challenge/${code}`);
+  assert.equal(pub.creator.name, nmA); assert.equal(pub.creatorScore, 14.2); ok('the registered code shows the challenger and the score to beat');
+  const land = await (await fetch(`${BASE}/c/${code}`)).text();
+  assert.ok(land.includes(`${nmA} scored 14.2 cm off. Can you beat it?`) && land.includes(`/og/c/${code}.png`)); ok('/c/<code> preview names the challenger');
+
+  // a code opened before its creator's device registered it still plays, same seed, against the code's score
+  const run2 = await A.play('nyanya-jetpack', 61.3);
+  const code2 = encodeChallenge({ game: 'nyanya-jetpack', seed: run2.start.seed, score: 61.3 });
+  assert.equal((await B.call('GET', `/challenge/${code2}`)).status, 404);
+  const early = await (await fetch(`${BASE}/c/${code2}`)).text();
+  assert.ok(early.includes('A friend scored 61.3 m. Can you beat it?')); ok('unregistered code: the link preview still shows the score');
+  const bs = await B.ok('POST', '/run/start', { game: 'nyanya-jetpack', challengeId: code2 });
+  assert.equal(bs.seed, run2.start.seed); assert.equal(bs.mode, 'h2h'); ok('unregistered code: the friend plays the same seed');
+  await sleep(2100);
+  const bf = await B.ok('POST', '/run/finish', { runId: bs.runId, score: 70.2 });
+  assert.equal(bf.challenge.result, 'win'); ok('unregistered code: the result is settled against the code\'s score');
+  await A.ok('PUT', `/challenges/${code2}`, { runId: run2.start.runId });
+  assert.equal((await B.ok('GET', `/challenge/${code2}`)).creator.name, nmA); ok('registration later claims it: the challenger is named');
+  assert.equal((await B.call('PUT', `/challenges/${code2}`, { runId: bs.runId })).status, 422); ok('nobody else can claim a registered code');
+
+  // an offline challenge run, finished later from the queue
+  const run3 = await A.play('cut-in-half', 9.9);
+  const code3 = encodeChallenge({ game: 'cut-in-half', seed: run3.start.seed, score: 9.9 });
+  const lf = await B.ok('POST', '/run/finish', { runId: 'L' + crypto.randomUUID(), score: 12, durationMs: 9000,
+    local: { game: 'cut-in-half', mode: 'h2h', variant: 'classic', seed: 'whatever', startedAt: Date.now() - 20000, challengeId: code3 } });
+  assert.equal(lf.challenge.result, 'loss'); ok('a challenge played offline settles when it syncs');
+
+  // names: the debounced check
+  const n1 = await (await fetch(`${BASE}/api/names/${nmA.toUpperCase()}`)).json();
+  const n2 = await (await fetch(`${BASE}/api/names/Free_${uniq}`)).json();
+  const n3 = await (await fetch(`${BASE}/api/names/kuma`)).json();
+  assert.deepEqual([n1.available, n1.reason, n2.available, n3.available, n3.reason], [false, 'name_taken', true, false, 'name_blocked']); ok('name check: taken (any case), free, blocked');
+
+  // threads: the server recomputes games and seeds; lives come from the order of play; the first completion ranks
+  const day = nairobiDay();
+  const def = threadDef('daily-' + day);
+  const attempt = 'att-' + uniq + '-1';
+  const wrong = await A.call('POST', '/run/start', { game: def.games[1], mode: 'thread', thread: { id: def.id, turn: 0, attempt } });
+  assert.equal(wrong.status, 400); ok('a thread turn must be the thread\'s game for that turn');
+  const goodScore = { 'nyanya-jetpack': 130, 'cut-in-half': 4.5, 'cap-drop': 7, 'arrow-puzzle': 0 };
+  const goodDetail = { 'cap-drop': { moves: 7, par: 7, solved: true }, 'arrow-puzzle': { bumps: 0, solved: true } };
+  const playTurn = async (C, turn, att, score, detail) => {
+    const g = def.games[turn];
+    const s = await C.ok('POST', '/run/start', { game: g, mode: 'thread', thread: { id: def.id, turn, attempt: att } });
+    assert.equal(s.seed, turnSeed(def, g));
+    await sleep(2600);
+    return C.ok('POST', '/run/finish', { runId: s.runId, score: score ?? goodScore[g], detail: detail ?? goodDetail[g] ?? {}, durationMs: 3000 });
+  };
+  const f0 = await playTurn(A, 0, attempt);
+  assert.equal(f0.stars, 3); ok(`thread turn 1 (${def.games[0]}): same seed for everyone, 3 stars`);
+  assert.equal((await A.call('PUT', `/threads/${def.id}/results/${attempt}`)).status, 409); ok('an unfinished thread is not accepted');
+  await playTurn(A, 1, attempt); await playTurn(A, 2, attempt);
+  const res = await A.ok('PUT', `/threads/${def.id}/results/${attempt}`);
+  assert.deepEqual([res.status, res.stars, res.livesLeft, res.ranked], ['complete', 9, 3, true]); assert.ok(res.rank >= 1);
+  assert.ok(res.awards.some((w) => w.event === 'thread.completed')); ok(`Daily thread complete: 9/9 stars, ranked #${res.rank}, completion bonus`);
+  const again = await A.ok('PUT', `/threads/${def.id}/results/${attempt}`);
+  assert.equal(again.stars, 9); assert.equal(again.awards.length, 0); ok('sending the result again changes nothing');
+  // B: fails the first turn three times: out of lives, not ranked
+  const attB = 'att-' + uniq + '-b';
+  const failScore = { 'nyanya-jetpack': 2, 'cut-in-half': 80, 'cap-drop': 999, 'arrow-puzzle': 999 };
+  const failDetail = { 'cap-drop': { moves: 3, par: 7, solved: false }, 'arrow-puzzle': { bumps: 3, solved: false } };
+  for (let i = 0; i < 3; i++) await playTurn(B, 0, attB, failScore[def.games[0]], failDetail[def.games[0]] || {});
+  const out = await B.ok('PUT', `/threads/${def.id}/results/${attB}`);
+  assert.deepEqual([out.status, out.livesLeft, out.ranked], ['out', 0, false]); ok('three failed turns: out of lives, unranked');
+  // A replays: unranked
+  const att2 = 'att-' + uniq + '-2';
+  for (let i = 0; i < 3; i++) await playTurn(A, i, att2);
+  assert.equal((await A.ok('PUT', `/threads/${def.id}/results/${att2}`)).ranked, false); ok('a replay of the Daily thread is unranked');
+  const sd = await A.ok('GET', `/standings/daily-thread/${day}`);
+  assert.ok(sd.rows.some((r) => r.name === nmA && r.stars === 9) && sd.me && sd.me.stars === 9); ok(`Daily thread standings: ${sd.rows.length} ranked, your row #${sd.me.rank}`);
+  assert.ok(!sd.rows.some((r) => r.me && r.stars !== 9)); ok('one ranked row per player');
+  const wkb = await A.ok('GET', `/standings/daily-thread/${day}?board=week`);
+  assert.ok(wkb.rows.length >= 1 && wkb.board === 'week'); ok('weekly roll-up of daily stars');
+  // thread challenge
+  const tc = threadChallengeCode(9);
+  const tr = await A.ok('PUT', `/challenges/${tc}`, { threadId: def.id });
+  assert.ok(tr.url.includes(`/t/${day}?from=${tc}`));
+  const tpub = await B.ok('GET', `/challenge/${tc}`);
+  assert.deepEqual([tpub.kind, tpub.stars, tpub.creator.name], ['thread', 9, nmA]);
+  const tland = await (await fetch(`${BASE}/t/${day}?from=${tc}`)).text();
+  assert.ok(tland.includes(`${nmA} got 9/9 stars`)); ok('thread challenge link: "Beat <name>\'s 9/9 stars" in the preview');
+
+  // typical play time per game
+  const st = await (await fetch(`${BASE}/api/games/stats`)).json();
+  assert.ok(Object.values(st.durations).every((s) => s >= 15 && s % 15 === 0)); ok('typical play time per game, rounded to 15 s');
 }
 
 console.log(`\n${passed} checks passed.`);

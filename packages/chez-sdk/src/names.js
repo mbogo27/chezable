@@ -3,7 +3,7 @@
 // they live only in the Worker so they can't be read or probed from the browser.
 
 export const NAME_MIN = 3, NAME_MAX = 16;
-const FORMAT = /^[A-Za-z0-9_-]+$/;
+const FORMAT = /^[A-Za-z0-9_]+$/; // spec 2 §3.4: letters, numbers and underscore
 const RESERVED_TOKENS = ['chezable', 'admin', 'administrator', 'mod', 'moderator', 'support', 'official', 'staff', 'team', 'system', 'root', 'help'];
 const RESERVED_SQUASHED = ['chezable', 'admin', 'official', 'moderator'];
 const LINKY = ['http', 'www', 'gmail', 'yahoo', 'hotmail', 'outlook', 'dotcom', 'cokeke'];
@@ -31,8 +31,8 @@ export const nameKey = (name) => normalize(name).replace(/[^a-z0-9]/g, '');
 export function nameFormatProblem(name) {
   const n = String(name || '');
   if (n.length < NAME_MIN || n.length > NAME_MAX || !FORMAT.test(n)) return 'name_invalid';
-  if (/^[_-]|[_-]$/.test(n)) return 'name_invalid';
-  if (/^[0-9_-]+$/.test(n)) return 'name_digits';
+  if (/^_|_$/.test(n)) return 'name_invalid';
+  if (/^[0-9_]+$/.test(n)) return 'name_digits';
   if (/[0-9]{7,}/.test(n)) return 'name_digits';
   const lower = n.toLowerCase().replace(/[_-]/g, '');
   if (LINKY.some((w) => lower.includes(w))) return 'name_blocked';

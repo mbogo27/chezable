@@ -16,25 +16,23 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const W = 600, H = 315;
 // panel where the Worker writes text; must be pure white in every base card
 export const PANEL = { x: 24, y: 120, w: 552, h: 124, padX: 22, nameY: 128, scoreY: 186 };
-const INK = [0x1b, 0x1d, 0x1e], BLUE = [0x3a, 0x56, 0xe0];
+const INK = [0x11, 0x11, 0x11], BLUE = [0x4f, 0x63, 0xf5]; // spec 2 tokens: --ink, --brand
 const BASE_COLORS = 224;
 
 const CHROME = [process.env.CHROME_PATH, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find((p) => p && existsSync(p));
-const font = (f) => 'data:font/woff2;base64,' + fsSync.readFileSync(path.join(root, 'packages/ui/fonts', f)).toString('base64');
 const logo = JSON.parse(await readFile(path.join(root, 'brand/logo-paths.json'), 'utf8'));
-const lockup = `<svg viewBox="${logo.viewBox}" xmlns="http://www.w3.org/2000/svg" style="height:100%;width:auto"><path fill="#1B1D1E" fill-rule="evenodd" d="${logo.mark}"/><path fill="#5271FF" fill-rule="evenodd" d="${logo.chez}"/><path fill="#1B1D1E" fill-rule="evenodd" d="${logo.able}"/></svg>`;
-const CSS = `<style>
-@font-face{font-family:"Archivo Black";src:url(${font('archivo-black.woff2')})}
-@font-face{font-family:"Barlow";font-weight:700;src:url(${font('barlow-700.woff2')})}
-*{margin:0;box-sizing:border-box}body{width:${W}px;height:${H}px;overflow:hidden;font-family:Barlow,sans-serif}
-</style>`;
+const lockup = `<svg viewBox="${logo.viewBox}" xmlns="http://www.w3.org/2000/svg" style="height:100%;width:auto"><path fill="#4F63F5" fill-rule="evenodd" d="${logo.mark}"/><path fill="#4F63F5" fill-rule="evenodd" d="${logo.chez}"/><path fill="#111111" fill-rule="evenodd" d="${logo.able}"/></svg>`;
+// spec 2 §2.2 type: Bricolage Grotesque for display, Figtree for body (from Google Fonts while rendering)
+const CSS = `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=block">
+<style>*{margin:0;box-sizing:border-box}body{width:${W}px;height:${H}px;overflow:hidden;font-family:Figtree,sans-serif;color:#111}</style>`;
+const iconSvg = (g) => { const f = path.join(root, 'apps/web/public', (g.card && g.card.icon) || ''); return g.card && g.card.icon && g.card.icon.startsWith('/') && existsSync(f) ? fsSync.readFileSync(f, 'utf8').replace('<svg ', '<svg width="56" height="56" ') : (g.card && g.card.icon) || ''; };
 
-// glyph sets: [key, CSS font, px size, line box height]
+// glyph sets: [key, CSS font, px size, line box height, weight]
 const FONTS = [
-  ['name', '"Archivo Black"', 34, 46],
-  ['nameSm', '"Archivo Black"', 26, 46],
-  ['score', 'Barlow', 30, 40],
-  ['scoreSm', 'Barlow', 24, 40],
+  ['name', '"Bricolage Grotesque"', 34, 46, 800],
+  ['nameSm', '"Bricolage Grotesque"', 26, 46, 800],
+  ['score', 'Figtree', 30, 40, 700],
+  ['scoreSm', 'Figtree', 24, 40, 700],
 ];
 
 /**
@@ -108,17 +106,18 @@ for (const dir of await readdir(path.join(root, 'games'))) {
   if (!existsSync(f)) continue;
   const g = JSON.parse(await readFile(f, 'utf8'));
   if (!g.featured) continue;
-  const color = (g.card && g.card.color) || '#F26B1D', ic = (g.card && g.card.icon) || '';
+  const color = (g.card && g.card.color) || '#E1E5FF';
   const title = g.title.en;
+  // flat, light, high contrast (spec 2 §2): the game's colour, its icon, a white panel the Worker writes into
   await page.setContent(`<!doctype html><html><head>${CSS}</head><body>
-    <div style="position:absolute;inset:0;background:#f3f3f3;background-image:radial-gradient(360px 360px at 105% -10%, rgb(82 113 255 / .14), transparent 60%),radial-gradient(300px 300px at -10% 110%, rgb(0 0 0 / .05), transparent 60%)"></div>
-    <div style="position:absolute;left:24px;top:22px;width:80px;height:80px;border-radius:20px;border:4px solid #1B1D1E;background:${color};display:grid;place-items:center;font-size:46px;box-shadow:0 5px 0 #1B1D1E">${ic}</div>
-    <div style="position:absolute;left:122px;top:30px;right:24px;font-family:'Archivo Black';font-size:${title.length > 13 ? 34 : 40}px;line-height:1.05;color:#1B1D1E">${title}</div>
-    <div style="position:absolute;left:124px;top:${title.length > 13 ? 74 : 80}px;font-weight:700;font-size:20px;color:#3A56E0">Challenge on Chezable</div>
-    <div style="position:absolute;left:${PANEL.x}px;top:${PANEL.y}px;width:${PANEL.w}px;height:${PANEL.h}px;border:4px solid #1B1D1E;border-radius:16px;box-shadow:0 6px 0 #1B1D1E;background:#FFFFFF"></div>
-    <div style="position:absolute;left:24px;bottom:22px;font-family:'Archivo Black';font-size:26px;color:#1B1D1E">Can you beat it?</div>
-    <div style="position:absolute;right:24px;bottom:18px;height:36px">${lockup}</div>
-  </body></html>`, { waitUntil: 'load' });
+    <div style="position:absolute;inset:0;background:${color}"></div>
+    <div style="position:absolute;left:24px;top:22px;width:80px;height:80px;border-radius:18px;border:3px solid #111;background:#fff;display:grid;place-items:center;font-size:46px">${iconSvg(g)}</div>
+    <div style="position:absolute;left:122px;top:28px;right:24px;font-family:'Bricolage Grotesque';font-weight:800;font-size:${title.length > 13 ? 36 : 42}px;line-height:1.05;letter-spacing:-.01em">${title}</div>
+    <div style="position:absolute;left:124px;top:${title.length > 13 ? 72 : 78}px;font-weight:700;font-size:20px">Challenge on Chezable</div>
+    <div style="position:absolute;left:${PANEL.x}px;top:${PANEL.y}px;width:${PANEL.w}px;height:${PANEL.h}px;border-radius:8px;background:#FFFFFF"></div>
+    <div style="position:absolute;left:24px;bottom:22px;font-family:'Bricolage Grotesque';font-weight:800;font-size:26px">Can you beat it?</div>
+    <div style="position:absolute;right:24px;bottom:16px;height:38px;background:#fff;border-radius:999px;padding:6px 14px">${lockup}</div>
+  </body></html>`, { waitUntil: 'load', timeout: 90000 });
   await page.evaluate(() => document.fonts.ready);
   const png = await page.screenshot({ type: 'png' });
   const { indices, palette } = quantize((await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true })).data, BASE_COLORS - 1);
@@ -136,18 +135,18 @@ for (const dir of await readdir(path.join(root, 'games'))) {
 const glyphs = {};
 let chars = '';
 for (let c = 32; c < 127; c++) chars += String.fromCharCode(c);
-for (const [key, family, size, lineH] of FONTS) {
-  const res = await page.evaluate(async ({ family, size, lineH, chars }) => {
+for (const [key, family, size, lineH, weight] of FONTS) {
+  const res = await page.evaluate(async ({ family, size, lineH, chars, weight }) => {
     await document.fonts.ready;
     const c = document.createElement('canvas'); const g = c.getContext('2d');
     const out = {};
     for (const ch of chars) {
-      g.font = `700 ${size}px ${family}`;
+      g.font = `${weight} ${size}px ${family}`;
       const adv = Math.ceil(g.measureText(ch).width);
       const w = Math.max(1, adv + 4);
       c.width = w; c.height = lineH;
       g.fillStyle = '#fff'; g.fillRect(0, 0, w, lineH);
-      g.font = `700 ${size}px ${family}`; g.fillStyle = '#000'; g.textBaseline = 'alphabetic';
+      g.font = `${weight} ${size}px ${family}`; g.fillStyle = '#000'; g.textBaseline = 'alphabetic';
       g.fillText(ch, 2, Math.round(lineH * 0.78));
       const d = g.getImageData(0, 0, w, lineH).data;
       const cov = [];
@@ -155,7 +154,7 @@ for (const [key, family, size, lineH] of FONTS) {
       out[ch] = { adv, w, cov };
     }
     return out;
-  }, { family, size, lineH, chars });
+  }, { family, size, lineH, chars, weight });
   const table = {}, blob = [];
   for (const ch of chars) {
     const gl = res[ch];

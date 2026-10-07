@@ -56,14 +56,14 @@ export function fixedLoop({ step, render, STEP = 1 / 120, maxSteps = 60 }) {
       while (acc >= STEP && n < maxSteps && stepping) { step(STEP, L.tick); L.tick++; acc -= STEP; n++; }
       if (n >= maxSteps) acc = 0;
     }
-    render(now, stepping ? acc / STEP : 0, dt);
+    if (stepping || !covered()) render(now, stepping ? acc / STEP : 0, dt);
     raf = requestAnimationFrame(frame);
   }
   return L;
 }
 
 export function outlined(ctx, text, x, y, size, fill = '#fff', align = 'center', stroke = '#1B1D1E') {
-  ctx.font = `${size}px "Archivo Black", Impact, sans-serif`;
+  ctx.font = `800 ${size}px "Bricolage Grotesque", system-ui, sans-serif`;
   ctx.textAlign = align;
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
@@ -78,6 +78,8 @@ export const TAU = Math.PI * 2;
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const angDiff = (a, b) => { let d = ((a - b) % TAU + TAU) % TAU; return d > Math.PI ? TAU - d : d; };
 export const reduced = () => !!(window.Chez && Chez.prefs.reducedMotion);
+/** A shell screen (start, end, turn card, receipt) covers the game: skip drawing frames nobody can see. */
+export const covered = () => document.body.classList.contains('screen-open');
 
 /** Simple HUD writer: updates text only when it changes. */
 export function hud(el) {

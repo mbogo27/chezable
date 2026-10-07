@@ -21,12 +21,12 @@ Open http://127.0.0.1:8787. To play as a second player (for challenges), open a 
 
 | Command | What it does |
 |---|---|
-| `npm run build` | catalogue → `chez.js` SDK → shell CSS and fonts → games → Vite shell pages → service worker, into `apps/web/dist` |
+| `npm run build` | catalogue → `chez.js` SDK → shell CSS → games → Vite shell pages → service worker, into `apps/web/dist` |
 | `npm run dev:web` | Vite dev server for the shell pages (proxies `/api` to a running `wrangler dev`) |
-| `npm test` | unit tests: RNG, rules, level generators and solvers, Nyanya replay determinism, Water Bugs rules |
-| `npm run smoke` | end-to-end API test against the running Worker: identity, runs, caps, challenges, send-back, Nyanya Rescue, Water Bugs by link, standings, recovery |
-| `npm run browser` | headless Chrome plays every stage to its end screen, walks a challenge from A to B and back, forces each end-screen state at 360 px, and loads every shell page; screenshots go to `tests/screens/` |
-| `npm run a11y` | axe-core (WCAG 2.2 AA) on every page and stage, light and dark |
+| `npm test` | unit tests: RNG, rules, level generators and solvers, Nyanya replay determinism, Water Bugs rules, name moderation, challenge codes, thread composition and lives, stars and strips |
+| `npm run smoke` | end-to-end API test against the running Worker: identity, runs, caps, challenges and device-made codes, Nyanya Rescue, Water Bugs by link, names, threads and their standings, recovery |
+| `npm run browser` | headless Chrome: the shared header on every page; every featured game start → end screen; the end screen on Slow 4G and offline; Share on the first tap offline; a challenge on another device (same seed); Today's Thread end to end with turn cards, lives, resume and the receipt; the name claim; screenshots in `tests/screens/` |
+| `npm run a11y` | axe-core (WCAG 2.2 AA) on every page, every featured game's start, play and end screens, the menu, a turn card and the receipt |
 | `npm run budget` | performance budgets from spec §9.5 |
 | `npm run check` | all of the above (needs `npm run dev` running in another terminal) |
 | `npm run assets` | regenerates app icons, the Open Graph images, and the challenge preview-card data (`apps/worker/src/og-data.generated.json`) |
@@ -52,14 +52,14 @@ ADMIN_TOKEN=local-admin-token
 | Spec | Where |
 |---|---|
 | A1 four featured games | `featured`/`archived` in each `stage.json`; `C.catalog.featured` |
-| A2 Home everywhere | game bar Home button (confirms mid-run), intro card, end screen, pass-the-phone results, menu |
-| A3 background | `--bg-base` and the radial shapes in `packages/ui/tokens.css`, `ui.css` |
+| A2 Home everywhere | the shared header's logo (confirms mid-run), end screen and turn card links, the menu |
+| A3 background | replaced by spec 2's flat `--ground` |
 | A5, B7 events | `C.track()` → `/api/events` and GA4 (`gtag`), names as in B7 |
 | B1 names | format rules `packages/chez-sdk/src/names.js` (shared); moderation lists **server-only** in `apps/worker/src/moderation.js`; `claimName` in `apps/worker/src/index.ts` |
-| B2 sharing | `packages/chez-sdk/src/share.js`: WhatsApp, Facebook, Copy link only |
+| B2 sharing | replaced by spec 2 §1.2: native share sheet, else WhatsApp, else copy (`share.js`) |
 | B2 preview cards | `GET /og/c/<id>.png`, drawn in the Worker by `apps/worker/src/og.ts` from data built by `scripts/og-cards.mjs` (about 10 ms CPU, edge-cached; fits the Free plan) |
-| B3 landing | intro card in `packages/chez-sdk/src/stage.js`: one Play button |
-| B4 end screens | `packages/chez-sdk/src/endscreen.js`, states 1–7; `?force_state=N` forces one for testing |
+| B3 landing | `stage.js` `showChallengeIntro`, in the start screen's style: one Play button |
+| B4 end screens | replaced by spec 2 §3.3 (`endscreen.js`) |
 | B5 boards | `GET /api/top/<game>?board=week|all|today|friends&limit=10`; weeks start Monday 00:00 EAT (`weekKey` in `rules.js`) |
 | B5 integrity | rate limits per player and IP; scores above the game's maximum are stored `flagged` and kept off boards |
 | Moderation | `POST /api/report`; `/admin` page and `/api/admin/*` behind the `ADMIN_TOKEN` secret |
@@ -70,7 +70,7 @@ Defaults taken for the open decisions (spec §9), all easy to change:
 
 - Template game: Nyanya Jetpack. The loop is shared code, so all four featured games got it at once (M6).
 - Backend: the existing Worker + D1; `/c/<id>` already server-renders its preview tags.
-- Third share option: Facebook.
+- Third share option: Facebook (until spec 2 replaced the sheet with the native share chain).
 - Name changes: one free change, then one every 14 days.
 - Mild insults and animal nicknames: allowed but flagged for review (they show on boards until an admin acts).
 - Success targets (§0), set 2026-10-04: name claim rate 40%, share rate 20%, link-to-play 60%, viral coefficient 0.4, D1 return 25%, D7 return 10%.
@@ -78,22 +78,54 @@ Defaults taken for the open decisions (spec §9), all easy to change:
 
 Old Swahili game URLs redirect (`apps/web/public/_redirects`): Kata Nusu, Toka and Kifuniko go to their English pages (301); archived or removed games go to the homepage (302).
 
+## Spec 2: fixes, new UI and game threads
+
+[`docs/spec-2-fixes-ui-threads.md`](docs/spec-2-fixes-ui-threads.md). No new games. Where each part lives:
+
+| Spec | Where |
+|---|---|
+| 1.1 slow end screen | Confirmed cause: the end screen waited for `/run/finish` (and a hash) before drawing. Now `stage.js` `onFinish` draws it from the local result at once; the result is written to the offline queue *then* sent (`net.js` `sendQueued`), so leaving the page never loses it. Rank and confirmed coins start as grey placeholders and fill in; after 5 s or a failure the rank line hides. Games stop drawing while a shell screen covers them, and GA calls wait for idle time. Logs `end_screen_render_ms` (`build`: our work, `ms`: to first paint). |
+| 1.2 Share challenge | Codes are made on the device when the game ends: `packages/chez-sdk/src/codes.js`, `<game>-<seed>-<score>-<6 base36>` (the seed part also carries `_L<level>`, `_n` Native, `_r` rescue). The share chain runs inside the tap, no network first: `navigator.share` → `wa.me` → clipboard (`share.js`). Registration is `PUT /api/challenges/:code` (idempotent), queued right behind the result. Opening `/c/<code>` decodes game, seed and score from the code; the server adds the challenger's name if it answers within 3 s. A code opened before it was registered is stored with no creator and claimed later; an offline challenge run settles when it syncs. "making your challenge link" no longer exists anywhere. |
+| 2 design system | `packages/ui/tokens.css` (the spec's tokens, light only) and `ui.css`; Bricolage Grotesque and Figtree from Google Fonts (`display=swap`), injected into every page by `scripts/build.mjs` |
+| 2.3 shared header | `packages/chez-sdk/src/header.js`: one component on every shell page and game page; slim 44 px in play; the thread HUD row. The menu button opens site navigation (and, on a game page, its settings, variant, pass the phone and how to play). The bottom tab bar is gone. |
+| 2.5 game icons | `apps/web/public/icons/games/<slug>.svg`, drawn from each game's own sprites (**drafts for Mbogo's approval**) |
+| 3.1 Home | `apps/web/src/main.js` `pageHome`: date, Standings, Today's Thread hero (start / continue / done), the 2-column game cards with median play time (`GET /api/games/stats`, real data once a game has 20+ runs, rounded to 15 s), Play and Duel, the claim card |
+| 3.2 Game start | `stage.js` `showStart`: the game's colour, icon, tagline, your best and weekly rank, Solo / Duel a friend / Daily, claim, the thread bar |
+| 3.3 End screen | `packages/chez-sdk/src/endscreen.js` |
+| 3.4 Name claim | `packages/chez-sdk/src/claim.js`; `GET /api/names/:name` for the 300 ms debounced check; names are now letters, numbers and `_` only; unclaimed scores show as Guest |
+| 3.5 Standings | `/standings` (Daily thread, today or this week) and `/top/<game>` |
+| 4 game contract | `run.finish(result)` → the shell completes a `GameResult` (`stage.js` `toGameResult`); stars and the result strip are worked out by `packages/chez-sdk/src/results.js` from each `stage.json` `"stars"` rule; `Chez.onForceEnd()` at `maxDurationSec` (60) |
+| 5 threads | `threads.js` (composition, seeds, lives: pure, shared with the Worker), `thread-state.js` (progress on the device, resume, expiry), `thread-ui.js` (intro, turn card, receipt); pages `/t/<date>`, `/t/anytime-<id>`, `/t/today`, `/t/new`. Server: `mode: 'thread'` runs (the server recomputes the game and seed for the turn), `PUT /api/threads/:threadId/results/:attemptId` (stars and lives worked out from the attempt's own runs; idempotent), `GET /api/standings/daily-thread/:date[?board=week]` |
+| 7 events | `end_screen_render_ms`, `share_tapped` / `share_completed` / `share_failed`, `challenge_opened`, `name_claimed` (surface), `thread_started`, `turn_completed`, `thread_completed`, `thread_abandoned`, `thread_resumed` |
+
+Data: [`apps/worker/migrations/0003_threads.sql`](apps/worker/migrations/0003_threads.sql) adds `thread_id`, `thread_turn`, `thread_attempt` to runs and a `thread_results` table. Challenge codes need no schema change.
+
+Choices made where the spec left room (all easy to change):
+
+- **Names of the games:** the spec's table calls Cap Drop "Kifuniko" (`/g/cap`), but it lists the *current* games, and Kifuniko was renamed Cap Drop on 2026-10-04 (English only). Cap Drop stays; its old links still redirect.
+- **Star thresholds** (spec §4, "Mbogo to set from real play data"): set in each `stage.json` by the spec's method from the 41 production runs so far. Nyanya 10 / 40 / 120 m; Cut It in Half at most 30 / 15 / 6 cm off; Cap Drop solved / within 2 of best / best possible; Arrow Puzzle cleared / at most 1 bump / no bumps.
+- **60-second runs:** every featured game ends at 60 s (a countdown shows from 10 s). The puzzles count a board not solved in time as 0 stars; Arrow Puzzle's "out of hearts" now ends the run as not cleared (0 stars) instead of its own retry card.
+- **Duel** starts a normal run whose end screen leads with "Share challenge" (the existing async head-to-head).
+- **Daily thread ranking:** only the first attempt that reaches a result ranks, and only on its own day; after running out of lives, tries say "Try again (unranked)".
+- **Thread completion bonus:** +10 XP, +5 coins, up to 10 a day.
+- **Dark mode:** removed (spec: light only). The native variant, pass the phone, Assist and "How it's made" moved from the start card into the menu.
+
 ## Layout
 
 ```
-apps/web/            shell pages (Vite): home, today, challenges, profile, standings, /c/ landing, about/privacy/terms
-  public/            manifest, icons, og images, _headers (the build adds /shell and /g)
+apps/web/            shell pages (Vite): home, standings, threads (/t/), challenges, profile, /c/ landing, about/privacy/terms
+  public/            manifest, icons (incl. icons/games/), og images, _headers (the build adds /shell and /g)
   sw.template.js     service worker (precaches the shell; caches each game on first open)
-apps/worker/         the Worker: API, D1 migrations, /c/<id> Open Graph rewrite, /b/<brand>/<slug>/ skins
-packages/chez-sdk/   chez.js: stage contract, runs, identity + signed requests, offline queue, prefs, i18n,
-                     audio, haptics, share sheet, result sheet, challenges, pass the phone, telemetry
-packages/ui/         tokens.css, ui.css, self-hosted fonts (59 KB)
+apps/worker/         the Worker: API, D1 migrations, /c/ and /t/ Open Graph rewrites, /og/c/ cards, /b/<brand>/<slug>/ skins
+packages/chez-sdk/   chez.js: the shared header, stage contract and GameResult, start and end screens, threads,
+                     challenge codes, sharing, name claim, identity + signed requests, offline queue, i18n, telemetry
+packages/ui/         tokens.css, ui.css (fonts come from Google Fonts; packages/ui/fonts is only for old OG renders)
 packages/i18n/       en.json (shell strings; game strings live in each stage.json). English only.
 packages/rng/        xmur3 + mulberry32, shared by stages, tests and the Worker
 games/<slug>/        index.html, game.js, stage.json (manifest), style.css, README.md, plus logic.js/sim.js where pure
 games/_lib/          shared stage helpers (logical canvas, fixed-timestep loop)
 brand/               logo SVGs traced from chezable-logo.png, app icon
-docs/                build spec, Chezability, pre-registration
+docs/                build spec, spec v1, spec 2, Chezability, pre-registration, the Swahili blocklist
 scripts/             build, tests, assets
 ```
 
@@ -103,15 +135,16 @@ A game is a folder. Its `game.js` does three things:
 
 ```js
 import M from './stage.json';
-Chez.stage(M);                                   // the shell draws the bar, intro card, menu and rail
-Chez.onPlay(async (ctx) => {                     // ctx: { mode, variant, challenge, player(s), skin }
+Chez.stage(M);                                   // the shell draws the header, start screen and menu
+Chez.onPlay(async (ctx) => {                     // ctx: { mode: solo|daily|h2h|thread|…, variant, challenge, … }
   const run = await Chez.run.start(ctx);         // { runId, seed, rng, stream(name), speed, input(), firstAtom() }
   // ... all gameplay randomness from run.rng / run.stream(); fixed-timestep simulation ...
-  await run.finish({ score, tiebreak, detail, share: { line, grid } });   // shell shows the result sheet
+  await run.finish({ score, tiebreak, detail, scoreLabel, sub });   // the shell draws the end screen or turn card
 });
+Chez.onForceEnd(() => { /* time's up: finish now with what you have */ });
 ```
 
-The shell then owns the result sheet, personal bests, XP and coins, sharing, challenge links, pass the phone (same seed for every player), dailies, the Native/Classic toggle and Assist mode.
+The shell completes the result into a `GameResult` (stars and strip from `stage.json` `"stars"`), and owns the end screen, personal bests, XP and coins, challenge codes, threads, pass the phone (same seed for every player), dailies, the Native/Classic toggle and Assist mode.
 
 **Determinism.** Every stage is seeded and simulates on a fixed timestep: Nyanya, Apple Slicer and Cut It in Half at 1/120 s, Hoop Shot at 1/240 s, Lemon Squeeze at 1/60 s. The puzzle and turn-based stages are pure functions of the seed and the moves. `Math.random` is used only for cosmetic particles and sounds.
 
@@ -137,7 +170,6 @@ Live at **https://chezable.com** (and www), served by the `chezable` Worker on C
 |---|---|---|
 | Cloudflare Pages + a separate Worker | one Worker with static assets | same origin, one deploy; Cloudflare's current recommendation; Pages-style `_headers` still apply |
 | Workers KV for daily seeds and rate limits | D1 tables (`daily_seeds`, `rate_limits`) | one less binding at MVP volume; KV can replace `rate_limits` later |
-| "Two subset WOFF2 files" | three (Archivo Black, Barlow 600, Barlow 700), 59 KB | fits the 60 KB budget; weight 500 maps to the 600 file |
 | Level *n* needs 100 × n^1.5 XP | level *n* at 100 × (n−1)^1.5 XP (level 2 at 100) | so level 1 starts at 0 and Native unlocks after a few first plays |
 | Swahili game names, English + Swahili UI | English names (Arrow Puzzle, Cap Drop, …), English-only UI; Zamia removed | owner decision, 2026-10-04 (old `/g/<swahili-name>/` links redirect) |
 | Shisima "if week 3 has room" | built, as **Water Bugs** | open decision 2 |
@@ -147,7 +179,9 @@ Live at **https://chezable.com** (and www), served by the `chezable` Worker on C
 ## Before launch: what still needs a person
 
 - **Legal review:** of the privacy notice and terms (drafts in `apps/web/src/static.js`), coin rules, and whether ODPC registration is needed.
-- **Real devices:** a mid-range Android over 4G, an iPhone, a tablet (launch item 1). The automated runs here use desktop Chrome at phone size.
+- **Real devices:** a mid-range Android over 4G, an iPhone, a tablet (launch item 1). The automated runs here use desktop Chrome at phone size. In particular, spec 2 §1.1 (end screen within 150 ms of the game ending, on Slow 4G) and §1.2 (the share sheet on the first tap on Android Chrome and iOS Safari, offline) need a real phone: in headless Chrome on the dev laptop our code builds the end screen in 10 to 45 ms, but a single frame takes about 200 ms there even on an idle page.
+- **Game icons:** approve or replace the drafts in `apps/web/public/icons/games/` (spec 2 §2.5).
+- **Spec 2 success targets** (§7): share completion rate, median `end_screen_render_ms`, share of daily visitors who start the Daily thread, thread completion rate, drop-off per turn, challenge links opened per share. Not set yet.
 - **Pre-registration:** confirm and date [`docs/preregistration.md`](docs/preregistration.md) before the first public link.
 
 P1 hooks left in place (spec §14): server replay verification (`runs.input_hash`, `runs.verified`, the shared `rng` and pure sims), groups (`edges`), coin spending (ledger only), and ghosts for the other stages (input logs are already recorded).

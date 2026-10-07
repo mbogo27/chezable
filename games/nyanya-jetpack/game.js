@@ -61,12 +61,22 @@ C.onPlay(async (ctx) => {
 C.onPause(() => { if (S && S.state === 'play') { S.state = 'paused'; hint.textContent = t('ny_keep'); hint.hidden = false; } pointers.clear(); keyHeld = false; updateHold(); });
 C.onResume(() => {});
 C.onQuit(() => { S = null; hint.hidden = true; thrustSound(false); });
+// spec 2 §4 forceEnd: time's up, the run ends where the tomato is (a rescue ends as a miss)
+C.onForceEnd(() => {
+  if (!S || S.over || S.state === 'dying') return;
+  if (S.mode === 'okoa') return endOkoa(false);
+  thrustSound(false); pointers.clear(); keyHeld = false;
+  S.timeUp = true;
+  finish();
+});
 
 /* ---------------- simulation ---------------- */
+let autoPilot = false;
 function step(dt, tick) {
   const s = S;
   if (!s || s.state !== 'play') return;
   const f = s.f;
+  if (autoPilot) s.pressed = f.y > s.course.corr(f.dist + 1.2).mid + 0.01 || f.vy > 0.5;
   if (s.pressed !== f.holding) { f.holding = s.pressed; s.toggles.push(f.ticks); run.input(f.holding ? 'P' : 'R', f.ticks); }
   if (s.ghost && !s.ghost.f.dead) {
     const g = s.ghost;
@@ -113,8 +123,8 @@ async function finish() {
   const i = tierIndex(d), nxt = TIERS[i + 1];
   const result = {
     score: d,
-    detail: { tier: TIERS[i].name, toggles: s.toggles.length },
-    sub: `${t('ny_tier', { tier: tierName(i) })}.${nxt ? ' ' + t('ny_next', { tier: tierName(i + 1), m: nxt.m }) : ''}`,
+    detail: { tier: TIERS[i].name, toggles: s.toggles.length, timeUp: s.timeUp ? 1 : undefined },
+    sub: `${s.timeUp ? t('ny_timeup') + ' ' : ''}${t('ny_tier', { tier: tierName(i) })}.${nxt ? ' ' + t('ny_next', { tier: tierName(i + 1), m: nxt.m }) : ''}`,
     share: { line: t('ny_line', { tier: tierName(i), n: Math.floor(d) }) },
     ghost: run.assist || s.mode === 'revive' ? undefined : s.toggles,
   };
@@ -199,7 +209,7 @@ function draw(now) {
     ctx.fillRect(x0, 0, x1 - x0, H);
   }
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `${Math.round(0.12 * H)}px "Archivo Black", Impact, sans-serif`;
+  ctx.font = `800 ${Math.round(0.12 * H)}px "Bricolage Grotesque", system-ui, sans-serif`;
   ctx.fillStyle = 'rgba(27,29,30,.78)';
   for (let i = 0; i < TIERS.length; i++) { const mm = TIERS[i].m + 9, x = sx(mm); if (x > -0.6 * H && x < W + 0.6 * H) ctx.fillText(tierName(i), x, course.corr(mm).mid * H); }
   drawWalls(course, dist, sx, m0, m1, ppm, true); drawWalls(course, dist, sx, m0, m1, ppm, false);
@@ -209,14 +219,14 @@ function draw(now) {
     ctx.save(); ctx.globalAlpha = 0.4;
     drawTomato(sx(g.dist), g.y * H, T.radius * H, 0, 1, 1, g.holding && !g.dead, g.dead);
     ctx.restore();
-    ctx.font = `700 13px Barlow, system-ui, sans-serif`; ctx.fillStyle = 'rgba(27,29,30,.7)';
+    ctx.font = `700 13px Figtree, system-ui, sans-serif`; ctx.fillStyle = 'rgba(27,29,30,.7)';
     ctx.fillText(t('ny_ghost', { name: s.ghost.name }), Math.max(60, Math.min(W - 60, sx(g.dist))), Math.max(14, g.y * H - T.radius * H - 14));
   }
   if (s && s.target && s.state !== 'over') {
     const tg = s.target, x = tx + tg.ahead * ppm;
     drawTomato(x, tg.yy * H, T.radius * H, Math.sin(now / 200) * 0.3, 1, 1, false, false, true);
     const left = Math.max(0, T.okoaSecs - s.okoaT);
-    ctx.font = `${Math.round(0.07 * H)}px "Archivo Black", Impact, sans-serif`; ctx.lineWidth = 5; ctx.strokeStyle = '#1b1d1e'; ctx.fillStyle = '#fff';
+    ctx.font = `800 ${Math.round(0.07 * H)}px "Bricolage Grotesque", system-ui, sans-serif`; ctx.lineWidth = 5; ctx.strokeStyle = '#1b1d1e'; ctx.fillStyle = '#fff';
     ctx.strokeText(t('ny_secs', { n: left.toFixed(1) }), W / 2, 0.08 * H); ctx.fillText(t('ny_secs', { n: left.toFixed(1) }), W / 2, 0.08 * H);
   }
   let sxq = 1, syq = 1;
@@ -299,5 +309,7 @@ function render(now, alpha, dt) {
   }
 }
 const loop = fixedLoop({ step, render, STEP });
+// test hook for scripts/browser.mjs: fly by itself
+window.__chezAuto = () => { autoPilot = true; if (S && (S.state === 'ready' || S.state === 'paused')) press(); };
 loop.start();
 setTier(0, false);

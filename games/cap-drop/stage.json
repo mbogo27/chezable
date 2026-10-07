@@ -9,6 +9,9 @@
   "rule": {
     "en": "Slide the caps until the gold cap drops down the chute into the glass."
   },
+  "tagline": {
+    "en": "Slide the caps into place."
+  },
   "howto": {
     "en": [
       "Tap a cap next to an empty space to slide it, or swipe it the way it should go.",
@@ -41,6 +44,17 @@
         }
       },
       "h2h": {
+        "order": "asc",
+        "min": 1,
+        "max": 999,
+        "template": {
+          "en": "{s} moves"
+        },
+        "templateOne": {
+          "en": "1 move"
+        }
+      },
+      "thread": {
         "order": "asc",
         "min": 1,
         "max": 999,
@@ -89,8 +103,8 @@
     "payload": "P02"
   },
   "card": {
-    "color": "#FFCC33",
-    "icon": "⭐"
+    "color": "#8ED8CC",
+    "icon": "/icons/games/cap-drop.svg"
   },
   "strings": {
     "en": {
@@ -108,7 +122,18 @@
       "kf_wet": "Through the water!",
       "kf_line": "I solved it in {m} moves (best possible {p})",
       "kf_line_lvl": "I reached level {n}",
-      "kf_slid": "Slid a cap. {n} moves."
+      "kf_slid": "Slid a cap. {n} moves.",
+      "kf_perfect": "Perfect. Best possible is {p}.",
+      "kf_one_move": "1 move",
+      "kf_unsolved": "Not solved",
+      "kf_unsolved_sub": "Time ran out. Best possible was {p}."
     }
-  }
+  },
+  "stars": {
+    "kind": "par",
+    "near": 2
+  },
+  "typicalSec": 45,
+  "maxDurationSec": 60,
+  "levels": true
 }

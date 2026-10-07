@@ -9,6 +9,9 @@
   "rule": {
     "en": "Tap arrows to slide them off the board, without letting one hit another."
   },
+  "tagline": {
+    "en": "Slide every arrow out of the grid."
+  },
   "howto": {
     "en": [
       "Tap an arrow and it slides out the way it points.",
@@ -41,6 +44,17 @@
         }
       },
       "h2h": {
+        "order": "asc",
+        "min": 0,
+        "max": 999,
+        "template": {
+          "en": "{s} bumps"
+        },
+        "templateOne": {
+          "en": "1 bump"
+        }
+      },
+      "thread": {
         "order": "asc",
         "min": 0,
         "max": 999,
@@ -90,8 +104,8 @@
     "payload": "P02"
   },
   "card": {
-    "color": "#6B4A2B",
-    "icon": "➡️"
+    "color": "#BDB0FF",
+    "icon": "/icons/games/arrow-puzzle.svg"
   },
   "strings": {
     "en": {
@@ -113,7 +127,20 @@
       "tk_next": "Play level {n}",
       "tk_line": "I cleared the board with {b} bumps in {s} s",
       "tk_line_lvl": "I reached level {n}",
-      "tk_secs": "{s} s"
+      "tk_secs": "{s} s",
+      "tk_uncleared": "Not cleared",
+      "tk_timeup": "Time ran out."
     }
-  }
+  },
+  "stars": {
+    "kind": "bumps",
+    "t": [
+      99,
+      1,
+      0
+    ]
+  },
+  "typicalSec": 45,
+  "maxDurationSec": 60,
+  "levels": true
 }

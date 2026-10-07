@@ -8,7 +8,10 @@ import { admin } from './admin';
 import * as shisima from '../../../games/water-bugs/logic.js';
 import { award, settleLevel, edge, type Award } from './ledger';
 import { Env, Player, HttpError, json, sha256Hex, randomId, authenticate, optionalAuth, rateLimit, origin, readJson, clampStr } from './util';
-import { challengeLanding, challengeCard, brandedStage } from './pages';
+import { challengeLanding, challengeCard, brandedStage, threadLanding } from './pages';
+import { isChallengeId, isCode, decodeChallenge, threadChallengeStars } from '../../../packages/chez-sdk/src/codes.js';
+import { threadDef, turnSeed, tally } from '../../../packages/chez-sdk/src/threads.js';
+import { starsFor } from '../../../packages/chez-sdk/src/results.js';
 
 // stage manifests are validated by the build; typed loosely here because each one has its own shape
 type Stage = Record<string, any>;
@@ -25,6 +28,7 @@ export default {
       if (url.pathname.startsWith('/api/')) return await api(req, env, url, ctx);
       if (url.pathname.startsWith('/c/')) return await challengeLanding(req, env, url, GAMES);
       if (url.pathname.startsWith('/og/c/')) return await challengeCard(req, env, url, GAMES, ctx);
+      if (url.pathname.startsWith('/t/')) return await threadLanding(req, env, url);
       if (url.pathname.startsWith('/b/')) return await brandedStage(req, env, url);
       return env.ASSETS.fetch(req);
     } catch (e) {
@@ -47,7 +51,10 @@ async function api(req: Request, env: Env, url: URL, ctx: ExecutionContext): Pro
   if (method === 'POST' && path === '/player/recover') return recoverPlayer(req, env, body);
   if (method === 'GET' && (m = path.match(/^\/daily\/([a-z0-9-]+)$/))) return daily(env, m[1]);
   if (method === 'GET' && (m = path.match(/^\/top\/([a-z0-9-]+)$/))) return top(req, env, url, m[1], body);
-  if (method === 'GET' && (m = path.match(/^\/challenge\/([A-Za-z0-9]{6,12})$/))) return getChallenge(req, env, m[1], body);
+  if (method === 'GET' && (m = path.match(/^\/challenges?\/([A-Za-z0-9._~-]{6,140})$/)) && isChallengeId(m[1])) return getChallenge(req, env, m[1], body);
+  if (method === 'GET' && (m = path.match(/^\/names\/([^/]{1,60})$/))) return checkNameAvailable(req, env, decodeURIComponent(m[1]), body);
+  if (method === 'GET' && path === '/games/stats') return gameStats(env);
+  if (method === 'GET' && (m = path.match(/^\/standings\/daily-thread\/(\d{4}-\d{2}-\d{2})$/))) return threadStandings(req, env, url, m[1], body);
   if (method === 'GET' && path === '/catalog') return json(catalogData, 200, { 'Cache-Control': 'public, max-age=300' });
   if (method === 'GET' && path === '/health') return json({ ok: true, day: nairobiDay() });
 
@@ -63,6 +70,8 @@ async function api(req: Request, env: Env, url: URL, ctx: ExecutionContext): Pro
   if (method === 'POST' && path === '/challenge') return createChallenge(req, env, me, body);
   if (method === 'GET' && path === '/challenges') return listChallenges(req, env, me);
   if (method === 'POST' && (m = path.match(/^\/challenge\/([A-Za-z0-9]{6,12})\/move$/))) return turnMove(req, env, me, m[1], body);
+  if (method === 'PUT' && (m = path.match(/^\/challenges\/([A-Za-z0-9._~-]{6,140})$/))) return registerChallenge(req, env, me, m[1], body);
+  if (method === 'PUT' && (m = path.match(/^\/threads\/([a-z0-9-]{8,40})\/results\/([A-Za-z0-9-]{8,40})$/))) return threadResult(env, me, m[1], m[2]);
   if (method === 'POST' && path === '/events') return events(env, me, body, ctx);
   throw new HttpError(404, 'not_found');
 }
@@ -228,8 +237,9 @@ async function runStart(req: Request, env: Env, me: Player, body: string) {
   let challengeId: string | null = null;
   let challengeOut: any = null;
 
+  let thread: any = null;
   if (b.challengeId) {
-    const c = await loadChallenge(env, String(b.challengeId));
+    const c = (await loadChallenge(env, String(b.challengeId))) || (await orphanFromCode(env, String(b.challengeId)));
     if (!c || c.game !== g.id) throw new HttpError(404, 'challenge_missing');
     challengeId = c.id;
     variant = c.variant;
@@ -255,14 +265,17 @@ async function runStart(req: Request, env: Env, me: Player, body: string) {
     } else throw new HttpError(400, 'not_a_run_challenge');
     challengeOut = await publicChallenge(req, env, c, me);
     await env.DB.prepare('INSERT OR IGNORE INTO challenge_views (challenge_id, player_id, at) VALUES (?, ?, ?)').bind(c.id, me.id, now).run();
+  } else if (mode === 'thread') {
+    thread = threadTurn(b.thread, g.id);
+    seed = thread.seed;
   } else {
     if (SPECIAL_MODES.includes(mode) || mode === 'h2h') throw new HttpError(400, 'challenge_required');
     if (!(g.modes || []).includes(mode) && !(variant === 'native' && (g.variants.native.modes || []).includes(mode))) throw new HttpError(400, 'bad_mode');
     seed = mode === 'daily' ? await dailySeed(env, g.id) : `${g.id}-${randomId(10, ID_ABC)}`;
   }
   const runId = 'r' + randomId(15, ID_ABC);
-  await env.DB.prepare('INSERT INTO runs (id, player_id, game, mode, variant, seed, assist, challenge_id, started_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .bind(runId, me.id, g.id, mode, variant, seed, assist, challengeId, now).run();
+  await env.DB.prepare('INSERT INTO runs (id, player_id, game, mode, variant, seed, assist, challenge_id, started_at, thread_id, thread_turn, thread_attempt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .bind(runId, me.id, g.id, mode, variant, seed, assist, challengeId, now, thread ? thread.id : null, thread ? thread.turn : null, thread ? thread.attempt : null).run();
   return json({ runId, seed, startedAt: now, mode, variant, counted, challenge: challengeOut });
 }
 
@@ -285,15 +298,26 @@ async function runFinish(req: Request, env: Env, me: Player, body: string) {
     const l = b.local;
     const g = stageOrThrow(String(l.game));
     const mode = String(l.mode || 'solo');
-    if (SPECIAL_MODES.includes(mode) || mode === 'h2h') throw new HttpError(400, 'online_only');
+    if (SPECIAL_MODES.includes(mode)) throw new HttpError(400, 'online_only');
+    // a challenge played offline from its code (spec 2 §1.2): settled now, against the code's score
+    let localChallenge: any = null, localThread: any = null;
+    if (mode === 'h2h') {
+      const cid = String(l.challengeId || '');
+      localChallenge = isChallengeId(cid) ? (await loadChallenge(env, cid)) || (await orphanFromCode(env, cid)) : null;
+      if (!localChallenge || localChallenge.kind !== 'beat' || localChallenge.game !== g.id) throw new HttpError(400, 'online_only');
+    }
+    if (mode === 'thread') localThread = threadTurn(l.thread, g.id);
     const startedAt = Math.min(Number(l.startedAt) || now, now);
     if (now - startedAt > 14 * DAY) throw new HttpError(410, 'too_old');
     const exists = await env.DB.prepare('SELECT id FROM runs WHERE id = ?').bind(b.runId).first();
     if (exists) throw new HttpError(409, 'already_finished');
     run = { id: b.runId, player_id: me.id, game: g.id, mode, variant: l.variant === 'native' && hasNative(g) ? 'native' : 'classic', seed: String(l.seed || '').slice(0, 80) || 'local',
-      assist: l.assist && g.assist ? 1 : 0, challenge_id: null, started_at: startedAt, finished_at: null, local: 1 };
-    await env.DB.prepare('INSERT INTO runs (id, player_id, game, mode, variant, seed, assist, started_at, local) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)')
-      .bind(run.id, me.id, run.game, run.mode, run.variant, run.seed, run.assist, run.started_at).run();
+      assist: l.assist && g.assist ? 1 : 0, challenge_id: localChallenge ? localChallenge.id : null, started_at: startedAt, finished_at: null, local: 1 };
+    if (localChallenge) { run.seed = localChallenge.seed; run.variant = localChallenge.variant; }
+    if (localThread) run.seed = localThread.seed;
+    await env.DB.prepare('INSERT INTO runs (id, player_id, game, mode, variant, seed, assist, started_at, local, challenge_id, thread_id, thread_turn, thread_attempt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)')
+      .bind(run.id, me.id, run.game, run.mode, run.variant, run.seed, run.assist, run.started_at, run.challenge_id,
+        localThread ? localThread.id : null, localThread ? localThread.turn : null, localThread ? localThread.attempt : null).run();
   } else {
     run = await env.DB.prepare('SELECT * FROM runs WHERE id = ? AND player_id = ?').bind(String(b.runId), me.id).first<any>();
     if (!run) throw new HttpError(404, 'run_missing');
@@ -319,6 +343,7 @@ async function runFinish(req: Request, env: Env, me: Player, body: string) {
   // weekly rank before this run counted, so the end screen can say "up {x}"
   const boardMode = run.mode === 'daily' ? 'daily' : 'solo';
   const rankable = ['solo', 'daily', 'h2h', 'revive'].includes(run.mode);
+  const stars = starsFor(g, score, b.detail && typeof b.detail === 'object' ? b.detail : {});
   const before = rankable ? placeIn((await boardRows(env, g, { board: 'week', mode: boardMode, variant: run.variant, assist: run.assist, day, week, meId: me.id, excludeRunId: run.id })).rows, me.id) : null;
   await env.DB.prepare('UPDATE runs SET score = ?, tiebreak = ?, detail = ?, input_hash = ?, finished_at = ?, day = ?, week_key = ?, flagged = ? WHERE id = ?')
     .bind(score, tiebreak, detailText, clampStr(b.inputHash, 80), now, day, week, flagged, run.id).run();
@@ -332,7 +357,7 @@ async function runFinish(req: Request, env: Env, me: Player, body: string) {
 
   // personal best within the same board group, variant and assist flag (pass and rescue runs don't count)
   let pb = false, best: number | null = null, prevBest: number | null = null;
-  if (!['pass', 'okoa', 'turn'].includes(run.mode)) {
+  if (!['pass', 'okoa', 'turn', 'thread'].includes(run.mode)) {
     const modes = sameGroupModes(g, run.mode);
     const agg = def.order === 'asc' ? 'MIN' : 'MAX';
     const prev = await env.DB.prepare(
@@ -356,7 +381,7 @@ async function runFinish(req: Request, env: Env, me: Player, body: string) {
   let rank: number | null = null, next: any = null;
   if (rankable) ({ rank, next } = placeIn((await boardRows(env, g, { board: 'week', mode: boardMode, variant: run.variant, assist: run.assist, day, week, meId: me.id })).rows, me.id));
   return json({ ok: true, runId: run.id, awards, xp: lvl.xp, coins: lvl.coins, level: lvl.level, levelUp: lvl.levelUp, pb, best, prevBest, order: def.order,
-    rank, prevRank: before ? before.rank : null, next, flagged: !!flagged, firstPlay, named: !!me.handle, challenge: challengeOut });
+    rank, prevRank: before ? before.rank : null, next, flagged: !!flagged, firstPlay, named: !!me.handle, challenge: challengeOut, stars });
 }
 
 async function settleChallengeRun(env: Env, me: Player, run: any, g: Stage, def: any, score: number, tiebreak: number | null, now: number, push: (a: Award | null) => void) {
@@ -377,7 +402,7 @@ async function settleChallengeRun(env: Env, me: Player, run: any, g: Stage, def:
       .bind(c.id, me.id, run.id, score, caught ? 'caught' : 'missed', now).run();
     await edge(env, c.creator_id, me.id, g.id, 'challenged', now);
     if (caught) await edge(env, me.id, c.creator_id, g.id, 'revived', now);
-    if (me.created_at > c.created_at) {
+    if (c.creator_id && me.created_at > c.created_at) {
       await edge(env, c.creator_id, me.id, g.id, 'recruited', now);
       await award(env, c.creator_id, 'challenge.accepted_by_new_player', g.id, c.id, now);
       await settleLevel(env, c.creator_id);
@@ -398,13 +423,15 @@ async function settleChallengeRun(env: Env, me: Player, run: any, g: Stage, def:
   if (result === 'loss') { await edge(env, c.creator_id, me.id, g.id, 'beat', now); await edge(env, me.id, c.creator_id, g.id, 'lost_to', now); }
   push(await award(env, me.id, 'h2h.played', g.id, c.id, now));
   if (result === 'win') push(await award(env, me.id, 'h2h.won', g.id, c.id, now));
-  await award(env, c.creator_id, 'h2h.played', g.id, c.id, now);
-  if (result === 'loss') await award(env, c.creator_id, 'h2h.won', g.id, c.id, now);
-  if (me.created_at > c.created_at) {
-    await edge(env, c.creator_id, me.id, g.id, 'recruited', now);
-    await award(env, c.creator_id, 'challenge.accepted_by_new_player', g.id, c.id, now);
+  if (c.creator_id) {
+    await award(env, c.creator_id, 'h2h.played', g.id, c.id, now);
+    if (result === 'loss') await award(env, c.creator_id, 'h2h.won', g.id, c.id, now);
+    if (me.created_at > c.created_at) {
+      await edge(env, c.creator_id, me.id, g.id, 'recruited', now);
+      await award(env, c.creator_id, 'challenge.accepted_by_new_player', g.id, c.id, now);
+    }
+    await settleLevel(env, c.creator_id);
   }
-  await settleLevel(env, c.creator_id);
   return { ...base, result, counted: true };
 }
 
@@ -431,9 +458,7 @@ async function boardRows(env: Env, g: Stage, opts: BoardOpts) {
   const where = ['r.game = ?', 'r.variant = ?', 'r.assist = ?', 'r.finished_at IS NOT NULL', 'r.score IS NOT NULL',
     'COALESCE(r.flagged, 0) = 0', 'COALESCE(r.hidden, 0) = 0', "COALESCE(p0.status, 'ok') != 'hidden'", `r.mode IN (${modes.map(() => '?').join(',')})`];
   const params: any[] = [g.id, opts.variant, opts.assist, ...modes];
-  // unnamed players only ever see themselves; everyone else needs a claimed name to appear
-  if (opts.meId) { where.push('(p0.handle IS NOT NULL OR r.player_id = ?)'); params.push(opts.meId); }
-  else where.push('p0.handle IS NOT NULL');
+  // unclaimed players appear as "Guest" (spec 2 §3.4); their scores move to the name when they claim one
   if (opts.board === 'week') { where.push('r.week_key = ?'); params.push(opts.week); }
   if (opts.board === 'today') { where.push('r.day = ?'); params.push(opts.day); }
   if (opts.excludeRunId) { where.push('r.id != ?'); params.push(opts.excludeRunId); }
@@ -473,7 +498,7 @@ async function top(req: Request, env: Env, url: URL, slug: string, body: string)
   const mine = me ? out.find((r: any) => r.me) || null : null;
   const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 10));
   return json({ game: g.id, board, mode, variant, assist, day: nairobiDay(), week: weekKey(), order: scoreDef(g, mode).order,
-    rows: out.filter((r: any) => r.name).slice(0, limit), me: mine ? { ...mine, next: place.next } : null },
+    rows: out.slice(0, limit), me: mine ? { ...mine, next: place.next } : null },
     200, { 'Cache-Control': me ? 'no-store' : 'public, max-age=30' });
 }
 
@@ -538,6 +563,7 @@ async function createChallenge(req: Request, env: Env, me: Player, body: string)
 
 /** A challenge is hidden when an admin hid the challenger or their score: the link falls back to the plain game. */
 export async function challengeHidden(env: Env, c: any): Promise<boolean> {
+  if (!c.creator_id) return false; // opened from its code before the creator registered it
   const r = await env.DB.prepare("SELECT COALESCE(p.status, 'ok') AS status, COALESCE(r.hidden, 0) AS hidden, COALESCE(r.flagged, 0) AS flagged FROM players p LEFT JOIN runs r ON r.id = ? WHERE p.id = ?")
     .bind(c.creator_run_id, c.creator_id).first<any>();
   return !r || r.status === 'hidden' || r.hidden === 1 || r.flagged === 1;
@@ -579,6 +605,10 @@ async function publicChallenge(req: Request, env: Env, c: any, me: Player | null
 async function getChallenge(req: Request, env: Env, id: string, body: string) {
   const c = await loadChallenge(env, id);
   if (!c) throw new HttpError(404, 'challenge_missing');
+  if (c.kind === 'thread') {
+    const creator = await env.DB.prepare("SELECT handle, COALESCE(status, 'ok') AS status FROM players WHERE id = ?").bind(c.creator_id).first<any>();
+    return json({ id: c.id, kind: 'thread', threadId: c.seed, stars: c.creator_score, creator: { name: creator && creator.status !== 'hidden' ? creator.handle : null } });
+  }
   if (c.kind === 'beat' && (await challengeHidden(env, c))) return json({ id: c.id, game: c.game, hidden: true });
   const me = await optionalAuth(req, env, body);
   if (me && me.id !== c.creator_id) await env.DB.prepare('INSERT OR IGNORE INTO challenge_views (challenge_id, player_id, at) VALUES (?, ?, ?)').bind(c.id, me.id, Date.now()).run();
@@ -593,7 +623,7 @@ async function listChallenges(req: Request, env: Env, me: Player) {
     expiresAt: c.expires_at, creatorScore: c.creator_score, creatorName: c.creator_handle ?? null, creatorId: c.creator_id, ...extra,
   });
   const waitingYou = await env.DB.prepare(
-    `SELECT c.*, p.handle AS creator_handle FROM challenges c JOIN players p ON p.id = c.creator_id
+    `SELECT c.*, p.handle AS creator_handle FROM challenges c LEFT JOIN players p ON p.id = c.creator_id
      WHERE c.kind = 'beat' AND c.expires_at > ?1 AND c.creator_id != ?2
        AND (c.target_id = ?2 OR c.id IN (SELECT challenge_id FROM challenge_views WHERE player_id = ?2))
        AND NOT EXISTS (SELECT 1 FROM challenge_entries e WHERE e.challenge_id = c.id AND e.player_id = ?2)
@@ -618,7 +648,7 @@ async function listChallenges(req: Request, env: Env, me: Player) {
   ).bind(me.id).all<any>();
   const played = await env.DB.prepare(
     `SELECT c.*, e.score AS my_score, e.result AS my_result, e.created_at AS played_at, p.handle AS creator_handle FROM challenge_entries e
-     JOIN challenges c ON c.id = e.challenge_id JOIN players p ON p.id = c.creator_id
+     JOIN challenges c ON c.id = e.challenge_id LEFT JOIN players p ON p.id = c.creator_id
      WHERE e.player_id = ? ORDER BY e.created_at DESC LIMIT 30`
   ).bind(me.id).all<any>();
 
@@ -708,4 +738,223 @@ async function events(env: Env, me: Player, body: string, ctx: ExecutionContext)
   }
   if (stmts.length) ctx.waitUntil(env.DB.batch(stmts));
   return json({ ok: true, n: stmts.length });
+}
+
+/* ======================= spec 2: device-made challenge codes ======================= */
+const SLUGS = Object.keys(GAMES);
+
+/** The decoded code plus its game; null when the code can't be a real challenge. */
+function codeChallenge(code: string) {
+  const d = decodeChallenge(code, SLUGS);
+  if (!d) return null;
+  const g = GAMES[d.game];
+  if (!g || !(g.modes || []).includes('h2h')) return null;
+  const h = scoreDef(g, 'h2h');
+  if (d.kind === 'beat' && ((h.min != null && d.score < h.min) || (h.max != null && d.score > h.max))) return null;
+  if (d.variant === 'native' && !hasNative(g)) return null;
+  return { ...d, g };
+}
+
+/**
+ * A code opened before its creator's device registered it: store it now from what the code carries, with no
+ * creator yet ("A friend"). Registration later fills the creator in. Same code, same row: never a duplicate.
+ */
+async function orphanFromCode(env: Env, code: string) {
+  if (!isCode(code)) return null;
+  const d = codeChallenge(code);
+  if (!d) return null;
+  const now = Date.now();
+  const payload = d.level ? JSON.stringify({ level: d.level }) : null;
+  await env.DB.prepare(
+    `INSERT OR IGNORE INTO challenges (id, kind, game, variant, seed, payload, creator_id, creator_run_id, creator_score, created_at, expires_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, '', '', ?, ?, ?, ?)`
+  ).bind(code, d.kind, d.game, d.variant, d.seed, payload, d.score, now, d.kind === 'beat' ? NEVER : now + CHALLENGE_TTL, now).run();
+  return loadChallenge(env, code);
+}
+
+const threadUrl = (req: Request, env: Env, threadId: string, code: string) => `${origin(req, env)}/t/${threadId.replace(/^daily-/, '')}?from=${code}`;
+
+/** PUT /api/challenges/:code: idempotent, so five taps, retries or a queued replay make one record. */
+async function registerChallenge(req: Request, env: Env, me: Player, code: string, body: string) {
+  const b = await readJson(body);
+  const now = Date.now();
+  await rateLimit(env, `challenge:${me.id}`, 120, DAY);
+  const tStars = threadChallengeStars(code);
+  if (tStars != null) {
+    // a thread challenge: "Beat <name>'s 6/9 stars" on /t/<threadId>?from=<code>
+    const def = threadDef(String(b.threadId || ''));
+    if (!def) throw new HttpError(400, 'bad_thread');
+    const existing = await loadChallenge(env, code);
+    if (existing) {
+      if (existing.creator_id !== me.id) throw new HttpError(409, 'code_taken');
+      return json({ id: code, url: threadUrl(req, env, def.id, code) });
+    }
+    await env.DB.prepare(
+      `INSERT INTO challenges (id, kind, game, variant, seed, creator_id, creator_run_id, creator_score, created_at, expires_at, updated_at)
+       VALUES (?, 'thread', 'thread', 'classic', ?, ?, '', ?, ?, ?, ?)`
+    ).bind(code, def.id, me.id, tStars, now, NEVER, now).run();
+    return json({ id: code, url: threadUrl(req, env, def.id, code) }, 201);
+  }
+  const d = codeChallenge(code);
+  if (!d) throw new HttpError(400, 'bad_code');
+  const run = await env.DB.prepare('SELECT * FROM runs WHERE id = ? AND player_id = ?').bind(String(b.runId), me.id).first<any>();
+  if (!run || !run.finished_at) throw new HttpError(409, 'run_not_finished');
+  if (run.game !== d.game || ['pass', 'okoa', 'turn'].includes(run.mode)) throw new HttpError(422, 'code_mismatch');
+  let detail: any = {};
+  try { detail = run.detail ? JSON.parse(run.detail) : {}; } catch {}
+  // level ladders are challenged on the level's board and its head-to-head score; everything else on the run's seed
+  // a solo level run reports its board's head-to-head score alongside; a run on a level board (h2h) is scored on it already
+  const h2hScore = d.level && run.mode === 'solo' ? Number(b.payload && b.payload.h2hScore) : run.score;
+  if (d.level ? Number(detail.level) !== d.level : run.seed !== d.seed) throw new HttpError(422, 'code_mismatch');
+  if (!(Math.abs(Number(h2hScore) - d.score) < 0.051)) throw new HttpError(422, 'code_mismatch');
+  if (d.kind === 'revive' && !(d.g.variants && d.g.variants.native && d.g.variants.native.revive && run.variant === 'native')) throw new HttpError(400, 'no_revive');
+  const pl: any = { ...(b.payload && typeof b.payload === 'object' ? b.payload : {}) };
+  if (d.level) pl.level = d.level;
+  if (d.kind === 'beat' && detail.ghost) pl.ghost = detail.ghost;
+  const payload = Object.keys(pl).length ? JSON.stringify(pl).slice(0, 12000) : null;
+  const tiebreak = d.level ? (typeof pl.h2hTiebreak === 'number' ? pl.h2hTiebreak : null) : run.tiebreak;
+  const url = `${origin(req, env)}/c/${code}`;
+  const existing = await loadChallenge(env, code);
+  if (existing) {
+    if (existing.creator_id === me.id) return json({ id: code, url });
+    if (existing.creator_id) throw new HttpError(409, 'code_taken');
+    // opened before it was registered: the creator claims it now
+    await env.DB.prepare(`UPDATE challenges SET creator_id = ?, creator_run_id = ?, creator_tiebreak = ?, payload = ?, variant = ?, updated_at = ? WHERE id = ? AND creator_id = ''`)
+      .bind(me.id, run.id, tiebreak, payload, run.variant, now, code).run();
+  } else {
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO challenges (id, kind, game, variant, seed, payload, creator_id, creator_run_id, creator_score, creator_tiebreak, created_at, expires_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(code, d.kind, d.game, run.variant, d.seed, payload, me.id, run.id, d.score, tiebreak, now, d.kind === 'beat' ? NEVER : now + CHALLENGE_TTL, now).run();
+  }
+  await award(env, me.id, 'challenge.sent', d.game, code, now);
+  await settleLevel(env, me.id);
+  return json({ id: code, url }, existing ? 200 : 201);
+}
+
+/* ======================= spec 2: names ======================= */
+/** GET /api/names/:name: the debounced "Taken, try another" check. Never says which word was blocked. */
+async function checkNameAvailable(req: Request, env: Env, name: string, body: string) {
+  await rateLimit(env, `names:${req.headers.get('CF-Connecting-IP') || 'local'}`, 300, 3600 * 1000);
+  const verdict = checkName(name);
+  if (!verdict.ok) return json({ name, available: false, reason: verdict.tier === 'format' ? 'name_invalid' : 'name_blocked' });
+  const me = await optionalAuth(req, env, body);
+  const row = await env.DB.prepare('SELECT id FROM players WHERE name_normalized = ?').bind(nameKey(name)).first<{ id: string }>();
+  const available = !row || (!!me && row.id === me.id);
+  return json({ name, available, reason: available ? null : 'name_taken' }, 200, { 'Cache-Control': 'no-store' });
+}
+
+/* ======================= spec 2: typical play time per game ======================= */
+let statsCache: { at: number; body: any } | null = null;
+async function gameStats(env: Env) {
+  if (statsCache && Date.now() - statsCache.at < 3600 * 1000) return json(statsCache.body, 200, { 'Cache-Control': 'public, max-age=3600' });
+  const since = Date.now() - 30 * DAY;
+  const out: Record<string, number> = {};
+  for (const g of Object.values(GAMES).filter((x) => x.featured)) {
+    const res = await env.DB.prepare(
+      "SELECT finished_at - started_at AS ms FROM runs WHERE game = ? AND finished_at IS NOT NULL AND started_at > ? AND COALESCE(local, 0) = 0 AND mode NOT IN ('pass', 'okoa', 'turn') ORDER BY started_at DESC LIMIT 400"
+    ).bind(g.id, since).all<{ ms: number }>();
+    const ms = (res.results || []).map((r) => r.ms).filter((x) => x > 0 && x < 15 * 60000).sort((a, b) => a - b);
+    // the median from real play once there's enough of it, rounded to 15 seconds; until then the stage's own figure
+    const sec = ms.length >= 20 ? ms[Math.floor(ms.length / 2)] / 1000 : g.typicalSec || 45;
+    out[g.id] = Math.max(15, Math.round(sec / 15) * 15);
+  }
+  const body = { durations: out };
+  statsCache = { at: Date.now(), body };
+  return json(body, 200, { 'Cache-Control': 'public, max-age=3600' });
+}
+
+/* ======================= spec 2: threads ======================= */
+/** Validate a thread turn: the server recomputes the thread from its id, and the turn's seed from that. */
+function threadTurn(t: any, game: string) {
+  const def = threadDef(String((t && t.id) || ''));
+  if (!def) throw new HttpError(400, 'bad_thread');
+  const turn = Number(t.turn);
+  if (!(turn >= 0 && turn < def.games.length) || def.games[turn] !== game) throw new HttpError(400, 'bad_thread_turn');
+  const attempt = String(t.attempt || '');
+  if (!/^[A-Za-z0-9-]{8,40}$/.test(attempt)) throw new HttpError(400, 'bad_thread_attempt');
+  if (def.day && def.day > nairobiDay(Date.now() + 3600 * 1000)) throw new HttpError(400, 'thread_not_open');
+  return { id: def.id, turn, attempt, seed: turnSeed(def, game), def };
+}
+
+/**
+ * PUT /api/threads/:threadId/results/:attemptId: idempotent. Worked out from the attempt's own runs, so stars
+ * and lives can't simply be claimed: each run's stars come from its score, lives from the order of play.
+ * The first completion of a day's Daily thread, on that day, is the ranked one; replays and out-of-lives runs don't rank.
+ */
+async function threadResult(env: Env, me: Player, threadId: string, attempt: string) {
+  const def = threadDef(threadId);
+  if (!def) throw new HttpError(400, 'bad_thread');
+  const done = await env.DB.prepare('SELECT * FROM thread_results WHERE attempt_id = ?').bind(attempt).first<any>();
+  if (done) {
+    if (done.player_id !== me.id) throw new HttpError(409, 'attempt_taken');
+    return json(await threadResultOut(env, def, done, []));
+  }
+  const res = await env.DB.prepare(
+    'SELECT id, game, score, detail, thread_turn AS turn, started_at, finished_at FROM runs WHERE player_id = ? AND thread_attempt = ? AND thread_id = ? AND finished_at IS NOT NULL ORDER BY finished_at ASC'
+  ).bind(me.id, attempt, def.id).all<any>();
+  const runs = (res.results || []).map((r: any) => {
+    let detail = {};
+    try { detail = r.detail ? JSON.parse(r.detail) : {}; } catch {}
+    return { ...r, stars: def.games[r.turn] === r.game ? starsFor(GAMES[r.game], r.score, detail) ?? 0 : 0 };
+  });
+  const t = tally(runs);
+  if (!t.complete && !t.out) throw new HttpError(409, 'thread_unfinished');
+  const stars = [0, 1, 2].reduce((a, i) => a + (t.best[i] ? t.best[i].stars || 0 : 0), 0);
+  const duration = runs.reduce((a: number, r: any) => a + Math.max(0, r.finished_at - r.started_at), 0);
+  const now = Date.now();
+  let ranked = 0;
+  if (def.kind === 'daily' && t.complete && def.day === nairobiDay(now)) {
+    // only the first attempt that reaches a result ranks: after an out-of-lives run, tries are unranked
+    const prior = await env.DB.prepare('SELECT 1 FROM thread_results WHERE thread_id = ? AND player_id = ?').bind(def.id, me.id).first();
+    ranked = prior ? 0 : 1;
+  }
+  const results = [0, 1, 2].map((i) => (t.best[i] ? { game: def.games[i], score: t.best[i].score, stars: t.best[i].stars } : { game: def.games[i], score: null, stars: 0 }));
+  await env.DB.prepare(
+    'INSERT OR IGNORE INTO thread_results (attempt_id, thread_id, kind, day, player_id, status, stars, lives_left, duration_ms, ranked, results, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).bind(attempt, def.id, def.kind, def.day, me.id, t.complete ? 'complete' : 'out', stars, t.lives, duration, ranked, JSON.stringify(results), now).run();
+  const awards: Award[] = [];
+  if (t.complete) { const a = await award(env, me.id, 'thread.completed', null, attempt, now); if (a) awards.push(a); }
+  const lvl = await settleLevel(env, me.id);
+  const row = await env.DB.prepare('SELECT * FROM thread_results WHERE attempt_id = ?').bind(attempt).first<any>();
+  return json({ ...(await threadResultOut(env, def, row, awards)), xp: lvl.xp, coins: lvl.coins, level: lvl.level, levelUp: lvl.levelUp });
+}
+async function threadResultOut(env: Env, def: any, row: any, awards: Award[]) {
+  let rank: number | null = null;
+  if (row.ranked) {
+    const r = await env.DB.prepare(
+      'SELECT COUNT(*) AS n FROM thread_results WHERE thread_id = ? AND ranked = 1 AND (stars > ? OR (stars = ? AND (duration_ms < ? OR (duration_ms = ? AND created_at < ?))))'
+    ).bind(def.id, row.stars, row.stars, row.duration_ms, row.duration_ms, row.created_at).first<{ n: number }>();
+    rank = (r ? r.n : 0) + 1;
+  }
+  return { threadId: def.id, attempt: row.attempt_id, status: row.status, stars: row.stars, livesLeft: row.lives_left, durationMs: row.duration_ms,
+    ranked: !!row.ranked, rank, results: JSON.parse(row.results || '[]'), awards };
+}
+
+/** GET /api/standings/daily-thread/:date: the top 50 and your row. ?board=week sums daily stars across the week. */
+async function threadStandings(req: Request, env: Env, url: URL, day: string, body: string) {
+  const me = await optionalAuth(req, env, body);
+  const week = url.searchParams.get('board') === 'week';
+  let rows: any[];
+  if (week) {
+    const monday = weekKey(Date.parse(day + 'T12:00:00Z'));
+    const days = Array.from({ length: 7 }, (_, i) => 'daily-' + new Date(Date.parse(monday + 'T12:00:00Z') + i * DAY).toISOString().slice(0, 10));
+    const res = await env.DB.prepare(
+      `SELECT t.player_id, p.handle, SUM(t.stars) AS stars, SUM(t.duration_ms) AS duration_ms, MIN(t.created_at) AS created_at, COUNT(*) AS threads
+       FROM thread_results t JOIN players p ON p.id = t.player_id
+       WHERE t.ranked = 1 AND t.thread_id IN (${days.map(() => '?').join(',')}) AND COALESCE(p.status, 'ok') != 'hidden'
+       GROUP BY t.player_id ORDER BY stars DESC, duration_ms ASC, created_at ASC LIMIT 500`
+    ).bind(...days).all<any>();
+    rows = res.results || [];
+  } else {
+    const res = await env.DB.prepare(
+      `SELECT t.player_id, p.handle, t.stars, t.duration_ms, t.lives_left, t.created_at FROM thread_results t JOIN players p ON p.id = t.player_id
+       WHERE t.thread_id = ? AND t.ranked = 1 AND COALESCE(p.status, 'ok') != 'hidden'
+       ORDER BY t.stars DESC, t.duration_ms ASC, t.created_at ASC LIMIT 500`
+    ).bind('daily-' + day).all<any>();
+    rows = res.results || [];
+  }
+  const out = rows.map((r: any, i: number) => ({ rank: i + 1, name: r.handle, stars: r.stars, durationMs: r.duration_ms, threads: r.threads, me: !!me && r.player_id === me.id }));
+  const mine = out.find((r) => r.me) || null;
+  return json({ day, board: week ? 'week' : 'day', rows: out.slice(0, 50), me: mine }, 200, { 'Cache-Control': me ? 'no-store' : 'public, max-age=30' });
 }

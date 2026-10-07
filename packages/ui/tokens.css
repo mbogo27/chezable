@@ -1,49 +1,56 @@
-/* Chezable design tokens (build spec §2.2). Blue is Chezable, orange is play. */
-@font-face{font-family:"Archivo Black";font-style:normal;font-weight:400;font-display:swap;src:url(/shell/fonts/archivo-black.woff2) format("woff2")}
-/* Barlow 500 shares the 600 file to stay inside the 60 KB font budget (§9.5). */
-@font-face{font-family:"Barlow";font-style:normal;font-weight:500 600;font-display:swap;src:url(/shell/fonts/barlow-600.woff2) format("woff2")}
-@font-face{font-family:"Barlow";font-style:normal;font-weight:700;font-display:swap;src:url(/shell/fonts/barlow-700.woff2) format("woff2")}
-
+/* Chezable design tokens (spec 2 §2). Flat, light and high-contrast: solid colour blocks, one button shape,
+   generous spacing, no gradients, no heavy shadows. Light theme only for now. Text on any game colour or
+   accent is always --ink. Fonts load from Google Fonts with display=swap (the <link> is added to every page
+   by scripts/build.mjs); text renders in the fallback face until they arrive. */
 :root{
-  color-scheme: light dark;
-  --chez-blue:#5271FF;
-  --chez-blue-ink:#3A56E0;
-  --play:#F26B1D;
-  --tape:#FFD21F;
-  --line:#1B1D1E;
-  --ink:#1B1D1E;
-  --muted:#566166;
-  --paper:#FFFFFF;
-  --board:#DFE4E2;
-  /* page background (spec v1 §A3): calm, light, static; shapes anchored to the corners */
-  --bg-base:#F3F3F3;
-  --bg-shape-1:rgb(82 113 255 / .09);
-  --bg-shape-2:rgb(0 0 0 / .035);
-  --bg-shape-3:rgb(255 255 255 / .7);
-  --chip:#EEF1F0;
-  --veil:rgba(223,228,226,.66);
-  --success:#3FBF6A;
-  --success-ink:#1F7A40;
-  --danger:#E5322A;
-  --wordmark-able:#1B1D1E;
-  --font-display:"Archivo Black",Impact,"Arial Black",sans-serif;
-  --font-ui:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --bar-h:52px;
-  --radius-card:22px;
+  color-scheme: light;
+  /* base */
+  --ground:#F4F4F1;    /* page background */
+  --surface:#FFFFFF;   /* cards, header */
+  --ink:#111111;       /* text, primary buttons */
+  --muted:#555555;     /* secondary text */
+  --line:#E2E2DE;      /* borders, dividers */
+  --brand:#4F63F5;     /* logo, focus ring */
+
+  /* accents */
+  --coin-chip:#FFF1B8; /* header coin chip */
+  --coin-pill:#FFE27A; /* "+4 coins" pill */
+  --hero-tint:#E1E5FF; /* Today's Thread hero, claim banner */
+  --heart:#E5484D;     /* thread lives */
+
+  /* one colour per game */
+  --game-nyanya:#FF9E80;
+  --game-cut:#FFD54A;
+  --game-cap:#8ED8CC;
+  --game-arrow:#BDB0FF;
+
+  /* type */
+  --font-display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif; /* 700, 800 */
+  --font-body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;               /* 400–700 */
+
+  /* shape */
+  --radius-hero:20px;
+  --radius-card:16px;
+  --radius-tile:14px;
+  --radius-pill:999px;
+
+  /* spacing scale */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+
+  /* layout */
+  --hdr-h:56px;
   --safe-t:env(safe-area-inset-top,0px);
   --safe-b:env(safe-area-inset-bottom,0px);
   --safe-l:env(safe-area-inset-left,0px);
   --safe-r:env(safe-area-inset-right,0px);
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --chez-blue-ink:#8EA2FF; --ink:#F2F0EB; --muted:#9DB0B7; --paper:#18242A; --board:#22323A;
-    --bg-base:#1A262C; --bg-shape-1:rgb(82 113 255 / .14); --bg-shape-2:rgb(0 0 0 / .18); --bg-shape-3:rgb(255 255 255 / .04); --chip:#22323A; --veil:rgba(20,30,35,.72); --danger:#E5544A; --success-ink:#6FDC93;
-    --wordmark-able:#F2F0EB;
-  }
-}
-:root[data-theme="dark"]{
-  --chez-blue-ink:#8EA2FF; --ink:#F2F0EB; --muted:#9DB0B7; --paper:#18242A; --board:#22323A;
-  --bg-base:#1A262C; --bg-shape-1:rgb(82 113 255 / .14); --bg-shape-2:rgb(0 0 0 / .18); --bg-shape-3:rgb(255 255 255 / .04); --chip:#22323A; --veil:rgba(20,30,35,.72); --danger:#E5544A; --success-ink:#6FDC93;
-  --wordmark-able:#F2F0EB;
+
+  /* older names still used by game stylesheets and the archived games, mapped onto the new set */
+  --font-ui:var(--font-body);
+  --paper:var(--surface);
+  --tape:var(--coin-pill);
+  --chip:#EEEEEA;
+  --board:var(--ground);
+  --success:#1F7A3A;
+  --danger:#B3261E;
+  --veil:rgba(17,17,17,.38);
 }

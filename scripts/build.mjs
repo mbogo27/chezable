@@ -25,7 +25,14 @@ const GA_TAG = `<!-- Google tag (gtag.js) -->
 
   gtag('config', '${GA_ID}');
 </script>`;
-const withGa = (html) => (html.includes(GA_ID) ? html : html.replace(/<head>/i, `<head>\n${GA_TAG}`));
+// spec 2 §2.2: Bricolage Grotesque (display) and Figtree (body) from Google Fonts, display=swap, on every page
+const FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">`;
+const withGa = (html) => {
+  if (!html.includes('fonts.googleapis.com')) html = html.replace(/(<link rel="stylesheet" href="\/shell\/ui\.css[^>]*>)/i, `${FONTS}\n$1`);
+  return html.includes(GA_ID) ? html : html.replace(/<head>/i, `<head>\n${GA_TAG}`);
+};
 const t0 = Date.now();
 
 // ---------- 1. catalogue from each games/<slug>/stage.json ----------
@@ -35,10 +42,10 @@ for (const s of slugs) stages.push(JSON.parse(await readFile(r('games', s, 'stag
 stages.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 const pick = (o, keys) => Object.fromEntries(keys.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
 const shellCatalog = {
-  games: stages.map((s) => pick(s, ['id', 'version', 'order', 'featured', 'archived', 'title', 'rule', 'howto', 'modes', 'score', 'duration', 'seeded', 'variants', 'assist', 'turnBased', 'card', 'share', 'passCustom'])),
+  games: stages.map((s) => pick(s, ['id', 'version', 'order', 'featured', 'archived', 'title', 'rule', 'tagline', 'howto', 'modes', 'score', 'duration', 'seeded', 'variants', 'assist', 'turnBased', 'card', 'share', 'passCustom', 'stars', 'typicalSec', 'maxDurationSec', 'levels'])),
 };
 const workerCatalog = {
-  games: stages.map((s) => pick(s, ['id', 'title', 'rule', 'modes', 'score', 'duration', 'variants', 'assist', 'turnBased'])),
+  games: stages.map((s) => pick(s, ['id', 'title', 'rule', 'tagline', 'featured', 'modes', 'score', 'duration', 'variants', 'assist', 'turnBased', 'stars', 'typicalSec', 'card'])),
 };
 await writeFile(r('packages/chez-sdk/src/catalog.generated.json'), JSON.stringify(shellCatalog));
 await writeFile(r('apps/worker/src/catalog.generated.json'), JSON.stringify(workerCatalog, null, 1));
@@ -46,7 +53,7 @@ await writeFile(r('apps/worker/src/catalog.generated.json'), JSON.stringify(work
 /* ---------- 2. SDK ---------- */
 await rm(r(pub, 'shell'), { recursive: true, force: true });
 await rm(r(pub, 'g'), { recursive: true, force: true });
-await mkdir(r(pub, 'shell/fonts'), { recursive: true });
+await mkdir(r(pub, 'shell'), { recursive: true });
 const target = ['es2020', 'chrome80', 'safari13', 'firefox78'];
 await esbuild({
   entryPoints: [r('packages/chez-sdk/src/index.js')],
@@ -57,7 +64,7 @@ await esbuild({
 /* ---------- 3. shell CSS + fonts ---------- */
 const css = (await readFile(r('packages/ui/tokens.css'), 'utf8')) + '\n' + (await readFile(r('packages/ui/ui.css'), 'utf8'));
 await writeFile(r(pub, 'shell/ui.css'), (await transform(css, { loader: 'css', minify: true })).code);
-await cp(r('packages/ui/fonts'), r(pub, 'shell/fonts'), { recursive: true });
+// (packages/ui/fonts keeps the old self-hosted faces only for the Open Graph card renderer)
 
 /* ---------- 4. games ---------- */
 for (const s of slugs) {
@@ -95,7 +102,7 @@ if (!noVite) {
     }
   }
   await walk(dist);
-  const precache = files.filter((f) => /^\/(index\.html|manifest\.webmanifest|shell\/|assets\/|icons\/(icon-192|favicon|coin))/.test(f) && !f.endsWith('.map'));
+  const precache = files.filter((f) => /^\/(index\.html|manifest\.webmanifest|shell\/|assets\/|icons\/(icon-192|favicon|coin|games\/))/.test(f) && !f.endsWith('.map'));
   precache.push('/');
   const version = hashOf(Buffer.from(JSON.stringify(precache) + (await Promise.all(precache.filter((f) => f !== '/').map(async (f) => (await stat(path.join(dist, f))).size))).join(',')));
   let sw = await readFile(r('apps/web/sw.template.js'), 'utf8');
